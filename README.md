@@ -16,9 +16,27 @@ The setup script:
 6. Displays the public DID
 7. Shows the next command for publishing a signed message
 
-## One-command setup
+## Step-by-step setup
 
-Open a GitHub Codespace and run:
+### 1. Create a Codespace
+
+Click:
+
+**Code → Create codespace**
+
+Wait for the Codespace to open.
+
+### 2. Run the setup
+
+In the terminal, run:
 
 ```bash
 bash setup.sh
+```
+## Get your identity.pem
+```
+cd technocore-did-starter
+cat identity.pem
+```
+
+## Save it Done! 🎉
