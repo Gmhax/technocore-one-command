@@ -4,7 +4,7 @@ set -e
 
 REPO_URL="https://github.com/zunmax/technocore-did-starter.git"
 INSTALL_DIR="technocore-did-starter"
-LOBBY="lobby"   # ← usba lang ni kung gusto nimo laing room
+LOBBY="lobby"  
 
 echo "=========================================="
 echo "  Technocore DID One-Command Setup"
