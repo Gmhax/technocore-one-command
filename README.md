@@ -33,6 +33,7 @@ In the terminal, run:
 ```bash
 bash setup.sh
 ```
+- Create your identity passphrase 12+ characters minimum
 ### Important: Save your identity
 
 Your `identity.pem` is created inside your Codespace.
