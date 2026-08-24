@@ -33,7 +33,9 @@ In the terminal, run:
 ```bash
 bash setup.sh
 ```
-- Create your identity passphrase 12+ characters minimum
+- Create your identity passphrase (password) 12+ characters minimum
+- Passphrase for /workspaces/technocore-one-command/technocore-did-starter/identity.pem: Type your identity passphrase (Password)
+
 ### Important: Save your identity
 
 Your `identity.pem` is created inside your Codespace.
