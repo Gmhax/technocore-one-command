@@ -33,10 +33,18 @@ In the terminal, run:
 ```bash
 bash setup.sh
 ```
-## Get your identity.pem
-```
+### Important: Save your identity
+
+Your `identity.pem` is created inside your Codespace.
+
+It is **not stored in the GitHub repository** and should never be uploaded to GitHub.
+
+If you want to keep your DID permanently, download and save your `identity.pem` somewhere secure.
+
+Inside the Codespace:
+
+```bash
 cd technocore-did-starter
 cat identity.pem
 ```
-
-## Save it Done! 🎉
+# Done! 🎉
