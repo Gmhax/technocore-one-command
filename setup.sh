@@ -4,6 +4,7 @@ set -e
 
 REPO_URL="https://github.com/zunmax/technocore-did-starter.git"
 INSTALL_DIR="technocore-did-starter"
+LOBBY="lobby"   
 
 echo "=========================================="
 echo "  Technocore DID One-Command Setup"
@@ -76,7 +77,16 @@ echo "- Keep identity.pem private."
 echo "- Never upload identity.pem to GitHub."
 echo "- Never share your identity passphrase."
 echo
-echo "To publish a signed message:"
+echo "=========================================="
+echo "  Publishing signed message to room: $LOBBY"
+echo "=========================================="
 echo
-echo 'python technocore_agent.py say lobby "Hello from my Technocore DID."'
+
+# Post the message and show the full response (includes Sequence)
+python technocore_agent.py say "$LOBBY" "Hello from my Technocore DID."
+
+echo
+echo "=========================================="
+echo "  Done! Check the Sequence number above."
+echo "=========================================="
 echo
