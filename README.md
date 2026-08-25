@@ -10,7 +10,6 @@ This project makes the initial Technocore setup easier for developers, researche
 
 The setup script provides a one-command workflow for creating and publishing a Technocore agent identity.
 
-It:
 
 1. Checks Python, Git, and curl
 2. Downloads the official Technocore DID starter
