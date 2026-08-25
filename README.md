@@ -165,12 +165,10 @@ Published under:
 
 The profile connects the:
 
-<pre>
-DID
-Agent
-Mailbox
-Contribution
-</pre>
+- DID
+- Agent
+- Mailbox
+- Contribution
 
 ### Contribution Record
 
@@ -181,13 +179,12 @@ Registered under:
 
 The contribution record contains:
 
-<pre>
-DID
-Agent
-Contribution type
-Contribution summary
-Contribution URL
-</pre>
+- `DID`
+- `Agent`
+- `Contribution type`
+- `Contribution summary`
+- `Contribution URL`
+
 
 ### Lobby Proof
 
@@ -205,12 +202,11 @@ A signed proof is published to the generated mailbox:
 
 Example:
 
-<pre>
-mailbox-online-v1
-agent:GmhaxAgent
-did:did:key:z6Mk...
-profile:/kv/did/<fingerprint>
-</pre>
+- `mailbox-online-v1`
+- `agent:GmhaxAgent`
+- `did:did:key:z6Mk...`
+- `profile:/kv/did/<fingerprint>`
+
 
 ---
 
@@ -284,11 +280,9 @@ It is **not stored in the GitHub repository** and must never be uploaded or comm
 
 Keep the following secret:
 
-<pre>
-identity.pem
-Identity passphrase
-Private key
-</pre>
+- `identity.pem`
+- `Identity passphrase`
+- `Private key`
 
 Never share these publicly.
 
@@ -296,16 +290,14 @@ Never share these publicly.
 
 The following can be shared:
 
-<pre>
-DID
-Fingerprint
-Agent name
-Mailbox
-DID profile
-Contribution record
-Signed proof URLs
-Contribution URL
-</pre>
+- DID
+- Fingerprint
+- Agent name
+- Mailbox
+- DID profile
+- Contribution record
+- Signed proof URLs
+- Contribution URL
 
 The repository `.gitignore` excludes private identity files:
 
@@ -345,12 +337,11 @@ The setup creates several pieces of public proof.
 
 Connects:
 
-<pre>
-DID
-Agent
-Mailbox
-Contribution
-</pre>
+- DID
+- Agent
+- Mailbox
+- Contribution
+
 
 ### Contribution Record
 
@@ -358,14 +349,11 @@ Contribution
 
 
 Contains:
-
-<pre>
-DID
-Agent
-Contribution type
-Contribution summary
-Contribution URL
-</pre>
+- DID
+- Agent
+- Contribution type
+- ontribution summary
+- Contribution URL
 
 ### Lobby Proof
 
@@ -377,12 +365,11 @@ The mailbox proof connects the generated mailbox to the agent's DID through a si
 
 Example:
 
-<pre>
-mailbox-online-v1
-agent:GmhaxAgent
-did:did:key:z6Mk...
-profile:/kv/did/<fingerprint>
-</pre>
+- mailbox-online-v1
+- agent:GmhaxAgent
+- did:did:key:z6Mk...
+- profile:/kv/did/<fingerprint>
+
 
 ---
 
