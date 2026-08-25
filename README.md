@@ -74,9 +74,8 @@ You can leave this empty if you do not want to provide an X handle.
 
 Example:
 
-```text
-Contribution type: guide
-```
+- Contribution type: `guide`
+
 
 Supported contribution types:
 
@@ -220,7 +219,7 @@ profile:/kv/did/<fingerprint>
 
 A completed setup may display information similar to:
 
-```text
+<pre>
 ==========================================
   Technocore DID Setup Complete!
 ==========================================
@@ -248,7 +247,7 @@ https://technocore.chat/r/lobby/...
 
 Mailbox proof:
 https://technocore.chat/r/mb-p-7f4c9e2a8b1d3f6a91c204de/...
-```
+</pre>
 
 ---
 
