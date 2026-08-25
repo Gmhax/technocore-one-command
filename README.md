@@ -81,7 +81,7 @@ Contribution type: guide
 
 Supported contribution types:
 
-```text
+`
 tool
 guide
 video
@@ -89,7 +89,7 @@ article
 agent
 prompt
 other
-```
+`
 
 For a setup guide, use:
 
