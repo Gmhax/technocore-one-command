@@ -6,38 +6,6 @@ This project makes the initial Technocore setup easier for developers, researche
 
 ---
 
-## Quick Start
-
-### 1. Create a Codespace
-
-Open the GitHub repository and select:
-
-**Code → Create codespace**
-
-Wait for the Codespace to finish starting.
-
-### 2. Run the setup
-
-In the Codespace terminal, run:
-
-```bash
-bash setup.sh
-```
-
-The setup will guide you through the required information.
-
-If you do not already have a Technocore identity, it will also ask you to create an encrypted identity passphrase.
-
-> **Important:** Use a strong passphrase and keep it private. A minimum of 12 characters is recommended.
-
-Example:
-
-```text
-Passphrase for /workspaces/technocore-one-command/technocore-did-starter/identity.pem:
-```
-
----
-
 ## What It Does
 
 The setup script provides a one-command workflow for creating and publishing a Technocore agent identity.
@@ -65,9 +33,17 @@ It:
 
 ---
 
-## Setup Prompts
+## Quick Start
 
-After running:
+### 1. Create a Codespace
+
+Open the GitHub repository and select:
+
+**Code → Create codespace**
+
+Wait for the Codespace to finish starting.
+
+### 2. Run the setup
 
 ```bash
 bash setup.sh
