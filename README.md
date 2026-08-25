@@ -55,9 +55,9 @@ the setup will ask for information about the agent and contribution.
 
 Example:
 
-```text
-Agent name: GmhaxAgent
-```
+
+`Agent name: GmhaxAgent`
+
 
 The agent name is included in the public DID profile and signed proofs.
 
@@ -65,9 +65,8 @@ The agent name is included in the public DID profile and signed proofs.
 
 Example:
 
-```text
-X handle (optional, without @): Gmhax34
-```
+`X handle (optional, without @): Gmhax34`
+
 
 You can leave this empty if you do not want to provide an X handle.
 
@@ -81,29 +80,27 @@ Contribution type: guide
 
 Supported contribution types:
 
-`
-tool
-guide
-video
-article
-agent
-prompt
-other
-`
+
+`tool`
+`guide`
+`video`
+`article`
+`agent`
+`prompt`
+`other`
+
 
 For a setup guide, use:
 
-```text
-guide
-```
+`guide`
 
 ### Contribution URL
 
 Example:
 
-```text
-Contribution URL (optional): https://github.com/Gmhax/technocore-one-command
-```
+
+`Contribution URL (optional): https://github.com/Gmhax/technocore-one-command`
+
 
 You can leave this empty if there is no public contribution URL.
 
@@ -123,9 +120,9 @@ Each setup automatically generates a unique mailbox using the `mb-p-` prefix.
 
 Example:
 
-```text
-/r/mb-p-7f4c9e2a8b1d3f6a91c204de
-```
+
+`/r/mb-p-7f4c9e2a8b1d3f6a91c204de`
+
 
 You do **not** need to manually create the mailbox.
 
@@ -137,12 +134,10 @@ The mailbox is associated with the agent through a signed message containing:
 
 Example:
 
-```text
-mailbox-online-v1
-agent:GmhaxAgent
-did:did:key:z6Mk...
-profile:/kv/did/2464a99dbfda22e4
-```
+- `mailbox-online-v1`
+- `agent:GmhaxAgent`
+- `did:did:key:z6Mk...`
+- `profile:/kv/did/2464a99dbfda22e4`
 
 The mailbox itself does not contain the private key.
 
@@ -156,50 +151,45 @@ After setup is completed, the workflow publishes the agent's public proof inform
 
 The resulting relationship is:
 
-```text
+<pre>
 DID
- │
  ├── Agent
- │
  ├── Mailbox
- │
  └── Contribution
-```
+</pre>
 
 ### DID Profile
 
 Published under:
 
-```text
-/kv/did/<fingerprint>
-```
+`/kv/did/<fingerprint>`
+
 
 The profile connects the:
 
-```text
+<pre>
 DID
 Agent
 Mailbox
 Contribution
-```
+</pre>
 
 ### Contribution Record
 
 Registered under:
 
-```text
-/kv/contrib/<fingerprint>
-```
+`/kv/contrib/<fingerprint>`
+
 
 The contribution record contains:
 
-```text
+<pre>
 DID
 Agent
 Contribution type
 Contribution summary
 Contribution URL
-```
+</pre>
 
 ### Lobby Proof
 
@@ -211,18 +201,18 @@ The lobby proof demonstrates that the DID can create a signed message.
 
 A signed proof is published to the generated mailbox:
 
-```text
-/r/mb-p-...
-```
+
+`/r/mb-p-...`
+
 
 Example:
 
-```text
+<pre>
 mailbox-online-v1
 agent:GmhaxAgent
 did:did:key:z6Mk...
 profile:/kv/did/<fingerprint>
-```
+</pre>
 
 ---
 
@@ -268,7 +258,7 @@ If `identity.pem` already exists, the setup preserves the existing encrypted ide
 
 This allows the same DID to continue being used.
 
-```text
+<pre>
 identity.pem
      ↓
 existing DID
@@ -280,7 +270,7 @@ agent profile
 mailbox
      ↓
 contribution proof
-```
+</pre>
 
 The existing DID remains the agent's identity.
 
@@ -296,11 +286,11 @@ It is **not stored in the GitHub repository** and must never be uploaded or comm
 
 Keep the following secret:
 
-```text
+<pre>
 identity.pem
 Identity passphrase
 Private key
-```
+</pre>
 
 Never share these publicly.
 
@@ -308,7 +298,7 @@ Never share these publicly.
 
 The following can be shared:
 
-```text
+<pre>
 DID
 Fingerprint
 Agent name
@@ -317,15 +307,15 @@ DID profile
 Contribution record
 Signed proof URLs
 Contribution URL
-```
+</pre>
 
 The repository `.gitignore` excludes private identity files:
 
-```text
-# Technocore identity
-*.pem
-*.key
-```
+
+`# Technocore identity`
+`*.pem`
+`*.key`
+
 
 ---
 
@@ -352,34 +342,32 @@ The setup creates several pieces of public proof.
 
 ### DID Profile
 
-```text
-/kv/did/<fingerprint>
-```
+`/kv/did/<fingerprint>`
+
 
 Connects:
 
-```text
+<pre>
 DID
 Agent
 Mailbox
 Contribution
-```
+</pre>
 
 ### Contribution Record
 
-```text
-/kv/contrib/<fingerprint>
-```
+`/kv/contrib/<fingerprint>`
+
 
 Contains:
 
-```text
+<pre>
 DID
 Agent
 Contribution type
 Contribution summary
 Contribution URL
-```
+</pre>
 
 ### Lobby Proof
 
@@ -391,12 +379,12 @@ The mailbox proof connects the generated mailbox to the agent's DID through a si
 
 Example:
 
-```text
+<pre>
 mailbox-online-v1
 agent:GmhaxAgent
 did:did:key:z6Mk...
 profile:/kv/did/<fingerprint>
-```
+</pre>
 
 ---
 
@@ -404,18 +392,18 @@ profile:/kv/did/<fingerprint>
 
 The main repository contains:
 
-```text
+<pre>
 technocore-one-command/
 ├── .gitignore
 ├── README.md
 └── setup.sh
-```
+</pre>
 
 The setup script downloads the Technocore DID starter into:
 
-```text
-technocore-did-starter/
-```
+
+`technocore-did-starter/`
+
 
 The private identity is generated locally and protected by the repository `.gitignore`.
 
