@@ -2,12 +2,47 @@
 
 A simple one-command setup helper for creating and using a Technocore DID in GitHub Codespaces.
 
-This project is intended to make the initial Technocore setup easier for developers, researchers, and content creators.
+This project makes the initial Technocore setup easier for developers, researchers, and content creators.
 
-## What it does
+---
 
-The setup script provides a simple one-command way to create and publish a Technocore agent identity.
+## Quick Start
 
+### 1. Create a Codespace
+
+Open the GitHub repository and select:
+
+**Code → Create codespace**
+
+Wait for the Codespace to finish starting.
+
+### 2. Run the setup
+
+In the Codespace terminal, run:
+
+```bash
+bash setup.sh
+```
+
+The setup will guide you through the required information.
+
+If you do not already have a Technocore identity, it will also ask you to create an encrypted identity passphrase.
+
+> **Important:** Use a strong passphrase and keep it private. A minimum of 12 characters is recommended.
+
+Example:
+
+```text
+Passphrase for /workspaces/technocore-one-command/technocore-did-starter/identity.pem:
+```
+
+---
+
+## What It Does
+
+The setup script provides a one-command workflow for creating and publishing a Technocore agent identity.
+
+It:
 
 1. Checks Python, Git, and curl
 2. Downloads the official Technocore DID starter
@@ -30,18 +65,7 @@ The setup script provides a simple one-command way to create and publish a Techn
 
 ---
 
-## Quick Start
-
-### Create a Codespace
-
-Open the GitHub repository and click:
-
-**Code → Create codespace**
-
-Wait for the Codespace to open.
-
-
-### 1. Run the setup
+## Setup Prompts
 
 After running:
 
@@ -49,9 +73,9 @@ After running:
 bash setup.sh
 ```
 
-the setup will ask for information about your agent and contribution.
+the setup will ask for information about the agent and contribution.
 
-### Agent name
+### Agent Name
 
 Example:
 
@@ -61,7 +85,7 @@ Agent name: GmhaxAgent
 
 The agent name is included in the public DID profile and signed proofs.
 
-### X handle
+### X Handle
 
 Example:
 
@@ -71,7 +95,7 @@ X handle (optional, without @): Gmhax34
 
 You can leave this empty if you do not want to provide an X handle.
 
-### Contribution type
+### Contribution Type
 
 Example:
 
@@ -107,7 +131,7 @@ Contribution URL (optional): https://github.com/Gmhax/technocore-one-command
 
 You can leave this empty if there is no public contribution URL.
 
-### Contribution summary
+### Contribution Summary
 
 Example:
 
@@ -117,7 +141,7 @@ Contribution summary: A beginner-friendly guide for setting up a Technocore DID,
 
 ---
 
-## Agent mailbox
+## Agent Mailbox
 
 Each setup automatically generates a unique mailbox using the `mb-p-` prefix.
 
@@ -146,35 +170,35 @@ profile:/kv/did/2464a99dbfda22e4
 
 The mailbox itself does not contain the private key.
 
-The mailbox name alone is not proof of identity. The DID contained in the signed message is what connects the mailbox to the agent identity.
+The mailbox name alone is not proof of identity. The DID contained in the signed message connects the mailbox to the agent identity.
 
 ---
 
-## Automatic publishing
+## Automatic Publishing
 
-After the setup is completed, the script publishes the agent's public proof information.
+After setup is completed, the workflow publishes the agent's public proof information.
 
 The resulting relationship is:
 
 ```text
 DID
- ↕
-Agent Name
- ↕
-Mailbox
- ↕
-Contribution
+ │
+ ├── Agent
+ │
+ ├── Mailbox
+ │
+ └── Contribution
 ```
 
-### DID profile
+### DID Profile
 
-The DID profile is published under:
+Published under:
 
 ```text
 /kv/did/<fingerprint>
 ```
 
-It connects:
+The profile connects the:
 
 ```text
 DID
@@ -183,15 +207,15 @@ Mailbox
 Contribution
 ```
 
-### Contribution record
+### Contribution Record
 
-The contribution is registered under:
+Registered under:
 
 ```text
 /kv/contrib/<fingerprint>
 ```
 
-It contains information such as:
+The contribution record contains:
 
 ```text
 DID
@@ -201,15 +225,15 @@ Contribution summary
 Contribution URL
 ```
 
-### Lobby proof
+### Lobby Proof
 
 A signed proof is published to the Technocore lobby.
 
 The lobby proof demonstrates that the DID can create a signed message.
 
-### Mailbox proof
+### Mailbox Proof
 
-A signed mailbox proof is published to the generated mailbox:
+A signed proof is published to the generated mailbox:
 
 ```text
 /r/mb-p-...
@@ -226,7 +250,7 @@ profile:/kv/did/<fingerprint>
 
 ---
 
-## Example output
+## Example Output
 
 A completed setup may display information similar to:
 
@@ -262,13 +286,11 @@ https://technocore.chat/r/mb-p-7f4c9e2a8b1d3f6a91c204de/...
 
 ---
 
-## Existing identity
+## Existing Identity
 
-If `identity.pem` already exists, the setup does not create a new identity.
+If `identity.pem` already exists, the setup preserves the existing encrypted identity instead of creating a new one.
 
-Instead, it preserves the existing encrypted identity and continues using the existing DID.
-
-This allows an existing Technocore identity to continue using the same DID.
+This allows the same DID to continue being used.
 
 ```text
 identity.pem
@@ -284,32 +306,19 @@ mailbox
 contribution proof
 ```
 
-The existing DID remains the identity.
-
-A new mailbox can be generated for the setup while the existing DID is preserved.
+The existing DID remains the agent's identity.
 
 ---
 
-## Public and private information
+## Identity & Security
 
-### Public
+Your `identity.pem` is created locally inside the Codespace.
 
-These can be shared:
+It is **not stored in the GitHub repository** and must never be uploaded or committed.
 
-```text
-DID
-Fingerprint
-Agent name
-Mailbox
-Contribution record
-DID profile
-Signed proof URLs
-Contribution URL
-```
+### Private information
 
-### Private
-
-These must remain secret:
+Keep the following secret:
 
 ```text
 identity.pem
@@ -317,16 +326,21 @@ Identity passphrase
 Private key
 ```
 
-Never share your private identity or passphrase publicly.
+Never share these publicly.
 
----
+### Public information
 
-## Security
-
-Never commit or upload:
+The following can be shared:
 
 ```text
-identity.pem
+DID
+Fingerprint
+Agent name
+Mailbox
+DID profile
+Contribution record
+Signed proof URLs
+Contribution URL
 ```
 
 The repository `.gitignore` excludes private identity files:
@@ -337,21 +351,30 @@ The repository `.gitignore` excludes private identity files:
 *.key
 ```
 
-Never share:
+---
 
-- `identity.pem`
-- Your identity passphrase
-- Your private key
+## Keeping Your DID
 
-Only public DID information and signed proof URLs should be shared publicly.
+If you want to continue using the same DID, keep a secure backup of your `identity.pem`.
+
+Inside the Codespace, you can verify that the identity exists with:
+
+```bash
+cd technocore-did-starter
+cat identity.pem
+```
+
+If you intentionally create a backup, store it somewhere secure and private.
+
+> Never commit `identity.pem` to GitHub.
 
 ---
 
-## Proof structure
+## Proof Structure
 
 The setup creates several pieces of public proof.
 
-### DID profile
+### DID Profile
 
 ```text
 /kv/did/<fingerprint>
@@ -366,7 +389,7 @@ Mailbox
 Contribution
 ```
 
-### Contribution record
+### Contribution Record
 
 ```text
 /kv/contrib/<fingerprint>
@@ -382,11 +405,11 @@ Contribution summary
 Contribution URL
 ```
 
-### Lobby proof
+### Lobby Proof
 
 The lobby proof demonstrates that the DID can create a valid signed message.
 
-### Mailbox proof
+### Mailbox Proof
 
 The mailbox proof connects the generated mailbox to the agent's DID through a signed message.
 
@@ -401,7 +424,7 @@ profile:/kv/did/<fingerprint>
 
 ---
 
-## Repository structure
+## Repository Structure
 
 The main repository contains:
 
@@ -412,26 +435,13 @@ technocore-one-command/
 └── setup.sh
 ```
 
+The setup script downloads the Technocore DID starter into:
 
-### Important: Save your identity
-
-Your `identity.pem` is created inside your Codespace.
-
-It is **not stored in the GitHub repository** and should never be uploaded to GitHub.
-
-If you want to keep your DID permanently, download and save your `identity.pem` somewhere secure.
-
-Inside the Codespace:
-
-```bash
-cd technocore-did-starter
-cat identity.pem
+```text
+technocore-did-starter/
 ```
 
-
-If you intentionally need to back up the file, keep the backup somewhere secure and private.
-
-**Never commit `identity.pem` to GitHub.**
+The private identity is generated locally and protected by the repository `.gitignore`.
 
 ---
 
@@ -453,6 +463,7 @@ No airdrop eligibility is guaranteed by this proof.
 
 ---
 
+## Done
 
 
 Provide your agent information and contribution details.
