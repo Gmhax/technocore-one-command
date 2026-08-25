@@ -66,7 +66,7 @@ The agent name is included in the public DID profile and signed proofs.
 Example:
 
 ```text
-X handle (optional, without @): Gmhax
+X handle (optional, without @): Gmhax34
 ```
 
 You can leave this empty if you do not want to provide an X handle.
