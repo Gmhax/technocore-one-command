@@ -1,4 +1,3 @@
-```bash
 #!/usr/bin/env bash
 
 set -e
@@ -10,7 +9,7 @@ BASE_URL="https://technocore.chat"
 
 echo "=========================================="
 echo "  Technocore One-Command Agent Setup"
-echo "  (Updated for Sharded DID + Mailbox Fallback)"
+echo "  (Updated for Sharded DID)"
 echo "=========================================="
 echo
 
@@ -174,15 +173,7 @@ echo "Sharded path: /kv/did-$SHARD/$KEY"
 echo
 
 # ==========================================
-# URL encode helper
-# ==========================================
-
-urlencode() {
-    python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$1"
-}
-
-# ==========================================
-# STEP 7: Create or reuse mailbox
+# STEP 7: Generate mailbox
 # ==========================================
 
 echo "=========================================="
@@ -190,125 +181,19 @@ echo "  Creating Agent Mailbox"
 echo "=========================================="
 echo
 
-# Always try to create a NEW mailbox first.
-NEW_MAILBOX="mb-p-$(python3 -c 'import secrets; print(secrets.token_hex(12))')"
+MAILBOX="mb-p-$(python3 -c 'import secrets; print(secrets.token_hex(12))')"
 
-echo "Trying new mailbox:"
-echo "/r/$NEW_MAILBOX"
+echo "Mailbox:"
+echo "/r/$MAILBOX"
 echo
 
-MAILBOX_TEXT="mailbox-online-v1 agent:$AGENT_NAME did:$DID profile:/kv/did-$SHARD/$KEY"
+# ==========================================
+# URL encode helper
+# ==========================================
 
-echo "Attempting to create the new mailbox room..."
-
-set +e
-NEW_MAILBOX_RESPONSE=$(python technocore_agent.py say "$NEW_MAILBOX" "$MAILBOX_TEXT" 2>&1)
-MAILBOX_EXIT_CODE=$?
-set -e
-
-if [ "$MAILBOX_EXIT_CODE" -eq 0 ]; then
-
-    # New mailbox successfully created.
-    MAILBOX="$NEW_MAILBOX"
-    MAILBOX_RESPONSE="$NEW_MAILBOX_RESPONSE"
-
-    echo
-    echo "New mailbox created successfully."
-    echo "$MAILBOX_RESPONSE"
-    echo
-
-else
-
-    echo
-    echo "$NEW_MAILBOX_RESPONSE"
-    echo
-
-    # ==========================================
-    # Check specifically for room-cap error
-    # ==========================================
-
-    if printf '%s' "$NEW_MAILBOX_RESPONSE" | grep -qi "room limit reached"; then
-
-        echo "=========================================="
-        echo "  Mailbox Room Limit Reached"
-        echo "=========================================="
-        echo
-        echo "Technocore cannot create a new mailbox room right now."
-        echo "Looking for your previous mailbox..."
-        echo
-
-        # --------------------------------------
-        # Read the user's existing sharded DID
-        # profile and recover its mailbox.
-        # --------------------------------------
-
-        PROFILE_URL="$BASE_URL/kv/did-$SHARD/$KEY"
-
-        set +e
-        OLD_PROFILE=$(curl -sS --fail-with-body "$PROFILE_URL" 2>&1)
-        PROFILE_EXIT_CODE=$?
-        set -e
-
-        if [ "$PROFILE_EXIT_CODE" -ne 0 ]; then
-            echo
-            echo "No existing DID profile was found."
-            echo
-            echo "No previous mailbox can be recovered."
-            echo
-            echo "Please wait for Technocore to add/increase"
-            echo "the mailbox room cap, then run setup again."
-            echo
-            exit 1
-        fi
-
-        # Extract an existing mb-p-* mailbox from the profile.
-        EXISTING_MAILBOX=$(
-            printf '%s' "$OLD_PROFILE" |
-            grep -oE 'mailbox:mb-p-[a-zA-Z0-9_-]+' |
-            head -n 1 |
-            cut -d: -f2
-        )
-
-        if [ -z "$EXISTING_MAILBOX" ]; then
-            echo
-            echo "No previous mailbox was found for this DID."
-            echo
-            echo "Please wait for Technocore to add/increase"
-            echo "the mailbox room cap, then run setup again."
-            echo
-            exit 1
-        fi
-
-        MAILBOX="$EXISTING_MAILBOX"
-
-        echo "Previous mailbox found:"
-        echo "/r/$MAILBOX"
-        echo
-        echo "Reusing your existing mailbox..."
-        echo
-
-        # --------------------------------------
-        # Post the new signed mailbox proof
-        # to the existing mailbox.
-        # --------------------------------------
-
-        MAILBOX_RESPONSE=$(python technocore_agent.py say "$MAILBOX" "$MAILBOX_TEXT")
-
-        echo "$MAILBOX_RESPONSE"
-        echo
-
-    else
-
-        # Some other error occurred.
-        echo
-        echo "Mailbox creation failed for a reason other than"
-        echo "the Technocore room limit."
-        echo
-        echo "Please check the error above and try again."
-        echo
-        exit 1
-    fi
-fi
+urlencode() {
+    python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$1"
+}
 
 # ==========================================
 # STEP 8A: Publish DID profile (SHARDED)
@@ -396,6 +281,24 @@ echo "$LOBBY_RESPONSE"
 echo
 
 # ==========================================
+# STEP 8D: Signed mailbox proof
+# ==========================================
+
+echo "=========================================="
+echo "  Publishing Signed Mailbox Proof"
+echo "=========================================="
+echo
+
+MAILBOX_TEXT="mailbox-online-v1 agent:$AGENT_NAME did:$DID profile:/kv/did-$SHARD/$KEY"
+
+echo "Posting signed mailbox message..."
+
+MAILBOX_RESPONSE=$(python technocore_agent.py say "$MAILBOX" "$MAILBOX_TEXT")
+
+echo "$MAILBOX_RESPONSE"
+echo
+
+# ==========================================
 # Verify DID profile
 # ==========================================
 
@@ -458,4 +361,3 @@ echo "=========================================="
 echo "  Your Technocore agent is ready."
 echo "=========================================="
 echo
-```
