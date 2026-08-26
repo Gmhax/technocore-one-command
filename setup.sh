@@ -9,6 +9,7 @@ BASE_URL="https://technocore.chat"
 
 echo "=========================================="
 echo "  Technocore One-Command Agent Setup"
+echo "  (Updated for Sharded DID)"
 echo "=========================================="
 echo
 
@@ -159,13 +160,16 @@ echo "$DID"
 echo
 
 # ==========================================
-# Fingerprint
+# Fingerprint + Shard
 # ==========================================
 
 FP=$(printf '%s' "$DID" | sha256sum | cut -c1-16)
+SHARD=${FP:0:2}
+KEY=${FP:2}
 
 echo "Fingerprint:"
 echo "$FP"
+echo "Sharded path: /kv/did-$SHARD/$KEY"
 echo
 
 # ==========================================
@@ -176,9 +180,6 @@ echo "=========================================="
 echo "  Creating Agent Mailbox"
 echo "=========================================="
 echo
-
-# Same basic pattern used by the DID tool:
-# mb-p- + 12 random bytes = 24 hexadecimal characters.
 
 MAILBOX="mb-p-$(python3 -c 'import secrets; print(secrets.token_hex(12))')"
 
@@ -195,11 +196,11 @@ urlencode() {
 }
 
 # ==========================================
-# STEP 8A: Publish DID profile
+# STEP 8A: Publish DID profile (SHARDED)
 # ==========================================
 
 echo "=========================================="
-echo "  Publishing DID Profile"
+echo "  Publishing DID Profile (Sharded)"
 echo "=========================================="
 echo
 
@@ -215,10 +216,11 @@ fi
 
 PROFILE_ENCODED=$(urlencode "$PROFILE_VALUE")
 
-echo "Publishing profile note..."
+echo "Publishing profile note to sharded path..."
+echo "Path: /kv/did-$SHARD/$KEY"
 
 curl -sS --fail-with-body \
-    "$BASE_URL/kv/did/$FP/set/$PROFILE_ENCODED"
+    "$BASE_URL/kv/did-$SHARD/$KEY/set/$PROFILE_ENCODED"
 
 echo
 echo
@@ -287,7 +289,7 @@ echo "  Publishing Signed Mailbox Proof"
 echo "=========================================="
 echo
 
-MAILBOX_TEXT="mailbox-online-v1 agent:$AGENT_NAME did:$DID profile:/kv/did/$FP"
+MAILBOX_TEXT="mailbox-online-v1 agent:$AGENT_NAME did:$DID profile:/kv/did-$SHARD/$KEY"
 
 echo "Posting signed mailbox message..."
 
@@ -306,7 +308,7 @@ echo "=========================================="
 echo
 
 curl -sS \
-    "$BASE_URL/kv/did/$FP"
+    "$BASE_URL/kv/did-$SHARD/$KEY"
 
 echo
 echo
@@ -332,12 +334,8 @@ echo "Fingerprint:"
 echo "  $FP"
 echo
 
-echo "Mailbox:"
-echo "  /r/$MAILBOX"
-echo
-
-echo "DID Profile:"
-echo "  $BASE_URL/kv/did/$FP"
+echo "Sharded DID Profile:"
+echo "  $BASE_URL/kv/did-$SHARD/$KEY"
 echo
 
 echo "Contribution:"
