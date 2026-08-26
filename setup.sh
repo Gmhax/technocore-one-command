@@ -173,7 +173,15 @@ echo "Sharded path: /kv/did-$SHARD/$KEY"
 echo
 
 # ==========================================
-# STEP 7: Generate mailbox
+# URL encode helper
+# ==========================================
+
+urlencode() {
+    python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$1"
+}
+
+# ==========================================
+# STEP 7: Mailbox
 # ==========================================
 
 echo "=========================================="
@@ -181,19 +189,186 @@ echo "  Creating Agent Mailbox"
 echo "=========================================="
 echo
 
-MAILBOX="mb-p-$(python3 -c 'import secrets; print(secrets.token_hex(12))')"
+# Generate a NEW mailbox name first.
+NEW_MAILBOX="mb-p-$(python3 -c 'import secrets; print(secrets.token_hex(12))')"
 
-echo "Mailbox:"
-echo "/r/$MAILBOX"
+MAILBOX="$NEW_MAILBOX"
+
+echo "Generated new mailbox:"
+echo "/r/$NEW_MAILBOX"
 echo
 
+MAILBOX_TEXT="mailbox-online-v1 agent:$AGENT_NAME did:$DID profile:/kv/did-$SHARD/$KEY"
+
 # ==========================================
-# URL encode helper
+# Try NEW mailbox first
 # ==========================================
 
-urlencode() {
-    python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$1"
-}
+echo "Trying new mailbox..."
+echo
+
+set +e
+
+NEW_MAILBOX_RESPONSE=$(python technocore_agent.py say "$NEW_MAILBOX" "$MAILBOX_TEXT" 2>&1)
+NEW_MAILBOX_STATUS=$?
+
+set -e
+
+if [ "$NEW_MAILBOX_STATUS" -eq 0 ]; then
+
+    echo "New mailbox created successfully."
+    echo "$NEW_MAILBOX_RESPONSE"
+    echo
+
+else
+
+    # Check specifically for the Technocore room-cap error.
+    if printf '%s' "$NEW_MAILBOX_RESPONSE" | grep -qi "room limit reached"; then
+
+        echo "New mailbox could not be created."
+        echo "Technocore mailbox room cap has been reached."
+        echo
+        echo "Searching for YOUR previous mailbox..."
+        echo
+
+        # ==========================================
+        # Find YOUR previous mailbox
+        # ==========================================
+
+        ROOMS_RESPONSE=$(curl -sS "$BASE_URL/rooms" || true)
+
+        if [ -z "$ROOMS_RESPONSE" ]; then
+            echo
+            echo "ERROR: Could not retrieve existing Technocore rooms."
+            echo
+            echo "Please wait for Technocore to increase"
+            echo "the mailbox room cap."
+            exit 1
+        fi
+
+        # Extract existing mb-p-* room names from /rooms.
+        ROOM_NAMES=$(printf '%s' "$ROOMS_RESPONSE" | python3 -c '
+import sys
+import json
+import re
+
+data = sys.stdin.read()
+
+names = set()
+
+def walk(obj):
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            if k in ("room", "name", "id"):
+                if isinstance(v, str) and re.fullmatch(r"mb-p-[a-f0-9]{24}", v):
+                    names.add(v)
+            walk(v)
+    elif isinstance(obj, list):
+        for item in obj:
+            walk(item)
+    elif isinstance(obj, str):
+        for match in re.findall(r"mb-p-[a-f0-9]{24}", obj):
+            names.add(match)
+
+try:
+    parsed = json.loads(data)
+    walk(parsed)
+except Exception:
+    for match in re.findall(r"mb-p-[a-f0-9]{24}", data):
+        names.add(match)
+
+for name in sorted(names):
+    print(name)
+' 2>/dev/null || true)
+
+        FOUND_MAILBOX=""
+
+        # ==========================================
+        # Check each mailbox for OUR DID
+        # ==========================================
+
+        if [ -n "$ROOM_NAMES" ]; then
+
+            while IFS= read -r CANDIDATE_ROOM; do
+
+                [ -z "$CANDIDATE_ROOM" ] && continue
+
+                ROOM_DATA=$(curl -sS "$BASE_URL/r/$CANDIDATE_ROOM" 2>/dev/null || true)
+
+                if [ -z "$ROOM_DATA" ]; then
+                    continue
+                fi
+
+                # We identify ownership by finding our DID together
+                # with the mailbox-online proof in that room.
+                if printf '%s' "$ROOM_DATA" | grep -Fq "$DID" &&
+                   printf '%s' "$ROOM_DATA" | grep -Fq "mailbox-online-v1"; then
+
+                    FOUND_MAILBOX="$CANDIDATE_ROOM"
+                    break
+                fi
+
+            done <<< "$ROOM_NAMES"
+
+        fi
+
+        # ==========================================
+        # Reuse previous mailbox if found
+        # ==========================================
+
+        if [ -n "$FOUND_MAILBOX" ]; then
+
+            MAILBOX="$FOUND_MAILBOX"
+
+            echo
+            echo "=========================================="
+            echo "  Existing Mailbox Found"
+            echo "=========================================="
+            echo
+            echo "Your previous mailbox was found:"
+            echo "/r/$MAILBOX"
+            echo
+            echo "Reusing your existing mailbox..."
+            echo
+
+            echo "Posting signed mailbox proof..."
+
+            MAILBOX_RESPONSE=$(python technocore_agent.py say "$MAILBOX" "$MAILBOX_TEXT")
+
+            echo "$MAILBOX_RESPONSE"
+            echo
+
+        else
+
+            echo
+            echo "=========================================="
+            echo "  No Existing Mailbox Found"
+            echo "=========================================="
+            echo
+            echo "No existing mailbox belonging to this DID was found."
+            echo
+            echo "Please wait for Technocore to increase"
+            echo "the mailbox room cap."
+            echo
+            exit 1
+
+        fi
+
+    else
+
+        # ==========================================
+        # Some other mailbox error
+        # ==========================================
+
+        echo
+        echo "Mailbox creation failed for another reason:"
+        echo
+        echo "$NEW_MAILBOX_RESPONSE"
+        echo
+        exit 1
+
+    fi
+fi
 
 # ==========================================
 # STEP 8A: Publish DID profile (SHARDED)
@@ -278,24 +453,6 @@ echo "Posting signed lobby proof..."
 LOBBY_RESPONSE=$(python technocore_agent.py say "$LOBBY" "$LOBBY_TEXT")
 
 echo "$LOBBY_RESPONSE"
-echo
-
-# ==========================================
-# STEP 8D: Signed mailbox proof
-# ==========================================
-
-echo "=========================================="
-echo "  Publishing Signed Mailbox Proof"
-echo "=========================================="
-echo
-
-MAILBOX_TEXT="mailbox-online-v1 agent:$AGENT_NAME did:$DID profile:/kv/did-$SHARD/$KEY"
-
-echo "Posting signed mailbox message..."
-
-MAILBOX_RESPONSE=$(python technocore_agent.py say "$MAILBOX" "$MAILBOX_TEXT")
-
-echo "$MAILBOX_RESPONSE"
 echo
 
 # ==========================================
