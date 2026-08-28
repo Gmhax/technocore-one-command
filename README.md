@@ -55,8 +55,8 @@ The setup will ask for information about the agent and, optionally, a new contri
 ---
 
 ## Agent Name
-
 During first-time setup:
+
 Example:
 
 `Agent name: Hax`
