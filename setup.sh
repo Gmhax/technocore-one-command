@@ -243,11 +243,7 @@ urlencode() {
 # ==========================================
 # FIND EXISTING MAILBOX
 # ==========================================
-
 find_existing_mailbox() {
-
-    echo "Checking existing Technocore mailboxes..."
-    echo
 
     ROOMS_RESPONSE=$(curl -sS "$BASE_URL/rooms" 2>/dev/null || true)
 
@@ -290,37 +286,31 @@ for name in sorted(names):
     print(name)
 ' 2>/dev/null || true)
 
-    FOUND_MAILBOX=""
-
-    if [ -n "$ROOM_NAMES" ]; then
-
-        while IFS= read -r CANDIDATE_ROOM; do
-
-            [ -z "$CANDIDATE_ROOM" ] && continue
-
-            ROOM_DATA=$(curl -sS \
-                "$BASE_URL/r/$CANDIDATE_ROOM" \
-                2>/dev/null || true)
-
-            if [ -z "$ROOM_DATA" ]; then
-                continue
-            fi
-
-            if printf '%s' "$ROOM_DATA" | grep -Fq "$DID" &&
-               printf '%s' "$ROOM_DATA" | grep -Fq "mailbox-online-v1"; then
-
-                FOUND_MAILBOX="$CANDIDATE_ROOM"
-                break
-            fi
-
-        done <<< "$ROOM_NAMES"
-
+    if [ -z "$ROOM_NAMES" ]; then
+        return 1
     fi
 
-    if [ -n "$FOUND_MAILBOX" ]; then
-        echo "$FOUND_MAILBOX"
-        return 0
-    fi
+    while IFS= read -r CANDIDATE_ROOM; do
+
+        [ -z "$CANDIDATE_ROOM" ] && continue
+
+        ROOM_DATA=$(curl -sS \
+            "$BASE_URL/r/$CANDIDATE_ROOM" \
+            2>/dev/null || true)
+
+        if [ -z "$ROOM_DATA" ]; then
+            continue
+        fi
+
+        if printf '%s' "$ROOM_DATA" | grep -Fq "$DID" &&
+           printf '%s' "$ROOM_DATA" | grep -Fq "mailbox-online-v1"; then
+
+            printf '%s\n' "$CANDIDATE_ROOM"
+            return 0
+
+        fi
+
+    done <<< "$ROOM_NAMES"
 
     return 1
 }
@@ -334,31 +324,90 @@ echo "  Agent Mailbox"
 echo "=========================================="
 echo
 
+MAILBOX_FILE=".mailbox"
 MAILBOX=""
 
 # ------------------------------------------
-# FIRST: Look for existing mailbox
+# FIRST: Reuse persisted mailbox
 # ------------------------------------------
 
-EXISTING_MAILBOX=$(find_existing_mailbox || true)
+if [ -f "$MAILBOX_FILE" ]; then
 
-if [ -n "$EXISTING_MAILBOX" ]; then
+    SAVED_MAILBOX=$(tr -d '[:space:]' < "$MAILBOX_FILE")
 
-    MAILBOX="$EXISTING_MAILBOX"
+    if printf '%s' "$SAVED_MAILBOX" | grep -qE '^mb-p-[a-f0-9]{24}$'; then
 
-    echo "Existing mailbox found:"
-    echo "/r/$MAILBOX"
-    echo
-    echo "Reusing your existing mailbox."
-    echo
+        echo "Existing mailbox record found:"
+        echo "/r/$SAVED_MAILBOX"
+        echo "Verifying mailbox ownership..."
+        echo
 
-else
+        SAVED_ROOM_DATA=$(curl -sS \
+            "$BASE_URL/r/$SAVED_MAILBOX" \
+            2>/dev/null || true)
+
+        if printf '%s' "$SAVED_ROOM_DATA" | grep -Fq "$DID" &&
+           printf '%s' "$SAVED_ROOM_DATA" | grep -Fq "mailbox-online-v1"; then
+
+            MAILBOX="$SAVED_MAILBOX"
+
+            echo "Existing mailbox verified."
+            echo "Reusing existing mailbox:"
+            echo "/r/$MAILBOX"
+            echo
+
+        else
+
+            echo "Saved mailbox is not valid for this DID."
+            echo "Searching for another existing mailbox..."
+            echo
+
+        fi
+
+    else
+
+        echo "Saved mailbox record is invalid."
+        echo "Searching for another existing mailbox..."
+        echo
+
+    fi
+
+fi
+
+# ------------------------------------------
+# SECOND: Discover existing mailbox
+# ------------------------------------------
+
+if [ -z "$MAILBOX" ]; then
+
+    EXISTING_MAILBOX=$(find_existing_mailbox || true)
+
+    if [ -n "$EXISTING_MAILBOX" ]; then
+
+        MAILBOX="$EXISTING_MAILBOX"
+
+        printf '%s\n' "$MAILBOX" > "$MAILBOX_FILE"
+        chmod 600 "$MAILBOX_FILE"
+
+        echo "Existing mailbox found:"
+        echo "/r/$MAILBOX"
+        echo "Saved mailbox for future runs."
+        echo
+
+    fi
+
+fi
+
+# ------------------------------------------
+# THIRD: Create mailbox ONLY if none exists
+# ------------------------------------------
+
+if [ -z "$MAILBOX" ]; then
 
     echo "No existing mailbox found."
     echo "Attempting to create a new mailbox..."
     echo
 
-    # Generate a new mailbox name
     NEW_MAILBOX="mb-p-$(python3 -c 'import secrets; print(secrets.token_hex(12))')"
 
     MAILBOX_TEXT="mailbox-online-v1 agent:$AGENT_NAME did:$DID profile:/kv/did-$SHARD/$KEY"
@@ -366,10 +415,6 @@ else
     echo "Generated mailbox:"
     echo "/r/$NEW_MAILBOX"
     echo
-
-    # --------------------------------------
-    # Try creating new mailbox
-    # --------------------------------------
 
     set +e
 
@@ -386,21 +431,19 @@ else
 
         MAILBOX="$NEW_MAILBOX"
 
+        printf '%s\n' "$MAILBOX" > "$MAILBOX_FILE"
+        chmod 600 "$MAILBOX_FILE"
+
         echo "New mailbox created successfully."
         echo "$NEW_MAILBOX_RESPONSE"
         echo
+        echo "Mailbox saved for future runs."
 
     else
 
         echo "Initial mailbox request returned an error:"
         echo "$NEW_MAILBOX_RESPONSE"
         echo
-
-        # ----------------------------------
-        # IMPORTANT:
-        # Check whether the mailbox actually
-        # exists despite a timeout.
-        # ----------------------------------
 
         if printf '%s' "$NEW_MAILBOX_RESPONSE" | grep -qiE \
             "timed out|timeout|outcome is unknown"; then
@@ -417,55 +460,19 @@ else
 
                 MAILBOX="$NEW_MAILBOX"
 
+                printf '%s\n' "$MAILBOX" > "$MAILBOX_FILE"
+                chmod 600 "$MAILBOX_FILE"
+
                 echo "Mailbox creation succeeded despite the timeout."
                 echo "Using:"
                 echo "/r/$MAILBOX"
                 echo
 
             fi
+
         fi
 
-        # ----------------------------------
-        # If still no mailbox:
-        # search existing mailbox again.
-        # ----------------------------------
-
         if [ -z "$MAILBOX" ]; then
-
-            echo "Searching for an existing mailbox belonging to this DID..."
-            echo
-
-            EXISTING_MAILBOX=$(find_existing_mailbox || true)
-
-            if [ -n "$EXISTING_MAILBOX" ]; then
-
-                MAILBOX="$EXISTING_MAILBOX"
-
-                echo "Existing mailbox found:"
-                echo "/r/$MAILBOX"
-                echo
-                echo "Reusing existing mailbox."
-                echo
-
-            fi
-        fi
-
-        # ----------------------------------
-        # If room cap reached and nothing found
-        # ----------------------------------
-
-        if [ -z "$MAILBOX" ]; then
-
-            if printf '%s' "$NEW_MAILBOX_RESPONSE" | grep -qi \
-                "room limit reached"; then
-
-                echo "Technocore room limit has been reached."
-                echo "No existing mailbox belonging to this DID was found."
-                echo
-                echo "Setup cannot continue until a mailbox is available."
-                exit 1
-
-            fi
 
             echo "Mailbox setup failed."
             echo
@@ -474,10 +481,11 @@ else
             exit 1
 
         fi
+
     fi
+
 fi
 
-# ==========================================
 # STEP 8: EXISTING RECORD DETECTION
 # ==========================================
 
@@ -498,7 +506,8 @@ echo "[1/4] Checking DID profile..."
 EXISTING_PROFILE=$(curl -sS "$DID_PATH" 2>/dev/null || true)
 
 if printf '%s' "$EXISTING_PROFILE" | grep -Fq "did:$DID" &&
-   printf '%s' "$EXISTING_PROFILE" | grep -Fq "agent:$AGENT_NAME"; then
+   printf '%s' "$EXISTING_PROFILE" | grep -Fq "agent:$AGENT_NAME" &&
+   printf '%s' "$EXISTING_PROFILE" | grep -Fq "mailbox:$MAILBOX"; then
 
     HAS_PROFILE="yes"
     echo "      Existing matching DID profile found."
@@ -506,7 +515,13 @@ if printf '%s' "$EXISTING_PROFILE" | grep -Fq "did:$DID" &&
 else
 
     HAS_PROFILE="no"
-    echo "      No matching DID profile found."
+
+    if [ -n "$EXISTING_PROFILE" ]; then
+        echo "      Existing DID profile found, but mailbox is stale."
+        echo "      It will be updated with the current mailbox."
+    else
+        echo "      No matching DID profile found."
+    fi
 
 fi
 
@@ -641,16 +656,59 @@ else
 
     PROFILE_ENCODED=$(urlencode "$PROFILE_VALUE")
 
-    echo "No DID profile found."
-    echo "Publishing new DID profile..."
+    if [ -n "$EXISTING_PROFILE" ]; then
+        echo "Existing DID profile found, but mailbox is stale."
+        echo "Updating DID profile with current mailbox..."
+    else
+        echo "No DID profile found."
+        echo "Publishing new DID profile..."
+    fi
+
     echo "Path: /kv/did-$SHARD/$KEY"
     echo
 
-    curl -sS --fail-with-body \
-        "$DID_PATH/set/$PROFILE_ENCODED"
+    set +e
 
-    echo
-    echo "DID profile created."
+    PROFILE_RESPONSE=$(curl -sS --fail-with-body \
+        "$DID_PATH/set/$PROFILE_ENCODED" 2>&1)
+
+    PROFILE_STATUS=$?
+
+    set -e
+
+    if [ "$PROFILE_STATUS" -eq 0 ]; then
+
+        echo "$PROFILE_RESPONSE"
+        echo
+        echo "DID profile updated successfully."
+
+    else
+
+        echo "DID profile write returned an error:"
+        echo "$PROFILE_RESPONSE"
+        echo
+        echo "Verifying whether the profile was updated despite the error..."
+
+        VERIFY_PROFILE=$(curl -sS "$DID_PATH" 2>/dev/null || true)
+
+        if printf '%s' "$VERIFY_PROFILE" | grep -Fq "did:$DID" &&
+           printf '%s' "$VERIFY_PROFILE" | grep -Fq "agent:$AGENT_NAME" &&
+           printf '%s' "$VERIFY_PROFILE" | grep -Fq "mailbox:$MAILBOX"; then
+
+            echo
+            echo "DID profile update succeeded despite the write error."
+            echo "Current profile:"
+            echo "$VERIFY_PROFILE"
+
+        else
+
+            echo
+            echo "DID profile was not updated."
+            echo "The server may be temporarily unavailable."
+            exit 1
+
+        fi
+    fi
 fi
 
 echo
