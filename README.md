@@ -8,9 +8,8 @@ This project makes the initial Technocore setup easier for developers, researche
 
 ## What It Does
 
-The setup script provides a one-command workflow for creating and using a Technocore agent identity.
+### The setup script provides a one-command workflow for creating and using a Technocore agent identity.
 
-It:
 
 1. Checks Python, Git, and curl
 2. Downloads the official Technocore DID starter
@@ -58,7 +57,7 @@ The setup will ask for information about the agent and, optionally, a new contri
 ## Agent Name
 
 During first-time setup:
-
+Example:
 
 `Agent name: Hax`
 
@@ -70,9 +69,7 @@ If an existing configuration is found, the setup loads the saved agent informati
 ---
 
 ## X Handle
-
 Example:
-
 
 `X handle (optional, without @): Gmhax34`
 
