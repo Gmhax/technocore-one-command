@@ -1,3 +1,4 @@
+```bash
 #!/usr/bin/env bash
 
 set -e
@@ -9,7 +10,7 @@ BASE_URL="https://technocore.chat"
 
 echo "=========================================="
 echo "  Technocore One-Command Agent Setup"
-echo "  (Updated for Sharded DID)"
+echo "  (Updated for Sharded DID + Mailbox Reuse)"
 echo "=========================================="
 echo
 
@@ -38,14 +39,14 @@ git --version
 echo
 
 # ==========================================
-# STEP 2: Clone official Technocore starter
+# STEP 2: Clone own Technocore starter
 # ==========================================
 
 if [ -d "$INSTALL_DIR" ]; then
     echo "[2/8] Existing Technocore folder found."
     echo "      Keeping the existing installation."
 else
-    echo "[2/8] Downloading official Technocore DID starter..."
+    echo "[2/8] Downloading Technocore DID starter..."
     git clone "$REPO_URL" "$INSTALL_DIR"
 fi
 
@@ -181,79 +182,26 @@ urlencode() {
 }
 
 # ==========================================
-# STEP 7: Mailbox
+# FIND EXISTING MAILBOX
 # ==========================================
 
-echo "=========================================="
-echo "  Creating Agent Mailbox"
-echo "=========================================="
-echo
+find_existing_mailbox() {
 
-# Generate a NEW mailbox name first.
-NEW_MAILBOX="mb-p-$(python3 -c 'import secrets; print(secrets.token_hex(12))')"
-
-MAILBOX="$NEW_MAILBOX"
-
-echo "Generated new mailbox:"
-echo "/r/$NEW_MAILBOX"
-echo
-
-MAILBOX_TEXT="mailbox-online-v1 agent:$AGENT_NAME did:$DID profile:/kv/did-$SHARD/$KEY"
-
-# ==========================================
-# Try NEW mailbox first
-# ==========================================
-
-echo "Trying new mailbox..."
-echo
-
-set +e
-
-NEW_MAILBOX_RESPONSE=$(python technocore_agent.py say "$NEW_MAILBOX" "$MAILBOX_TEXT" 2>&1)
-NEW_MAILBOX_STATUS=$?
-
-set -e
-
-if [ "$NEW_MAILBOX_STATUS" -eq 0 ]; then
-
-    echo "New mailbox created successfully."
-    echo "$NEW_MAILBOX_RESPONSE"
+    echo "Checking existing Technocore mailboxes..."
     echo
 
-else
+    ROOMS_RESPONSE=$(curl -sS "$BASE_URL/rooms" 2>/dev/null || true)
 
-    # Check specifically for the Technocore room-cap error.
-    if printf '%s' "$NEW_MAILBOX_RESPONSE" | grep -qi "room limit reached"; then
+    if [ -z "$ROOMS_RESPONSE" ]; then
+        return 1
+    fi
 
-        echo "New mailbox could not be created."
-        echo "Technocore mailbox room cap has been reached."
-        echo
-        echo "Searching for YOUR previous mailbox..."
-        echo
-
-        # ==========================================
-        # Find YOUR previous mailbox
-        # ==========================================
-
-        ROOMS_RESPONSE=$(curl -sS "$BASE_URL/rooms" || true)
-
-        if [ -z "$ROOMS_RESPONSE" ]; then
-            echo
-            echo "ERROR: Could not retrieve existing Technocore rooms."
-            echo
-            echo "Please wait for Technocore to increase"
-            echo "the mailbox room cap."
-            exit 1
-        fi
-
-        # Extract existing mb-p-* room names from /rooms.
-        ROOM_NAMES=$(printf '%s' "$ROOMS_RESPONSE" | python3 -c '
+    ROOM_NAMES=$(printf '%s' "$ROOMS_RESPONSE" | python3 -c '
 import sys
 import json
 import re
 
 data = sys.stdin.read()
-
 names = set()
 
 def walk(obj):
@@ -263,9 +211,11 @@ def walk(obj):
                 if isinstance(v, str) and re.fullmatch(r"mb-p-[a-f0-9]{24}", v):
                     names.add(v)
             walk(v)
+
     elif isinstance(obj, list):
         for item in obj:
             walk(item)
+
     elif isinstance(obj, str):
         for match in re.findall(r"mb-p-[a-f0-9]{24}", obj):
             names.add(match)
@@ -281,97 +231,195 @@ for name in sorted(names):
     print(name)
 ' 2>/dev/null || true)
 
-        FOUND_MAILBOX=""
+    FOUND_MAILBOX=""
 
-        # ==========================================
-        # Check each mailbox for OUR DID
-        # ==========================================
+    if [ -n "$ROOM_NAMES" ]; then
 
-        if [ -n "$ROOM_NAMES" ]; then
+        while IFS= read -r CANDIDATE_ROOM; do
 
-            while IFS= read -r CANDIDATE_ROOM; do
+            [ -z "$CANDIDATE_ROOM" ] && continue
 
-                [ -z "$CANDIDATE_ROOM" ] && continue
+            ROOM_DATA=$(curl -sS \
+                "$BASE_URL/r/$CANDIDATE_ROOM" \
+                2>/dev/null || true)
 
-                ROOM_DATA=$(curl -sS "$BASE_URL/r/$CANDIDATE_ROOM" 2>/dev/null || true)
+            if [ -z "$ROOM_DATA" ]; then
+                continue
+            fi
 
-                if [ -z "$ROOM_DATA" ]; then
-                    continue
-                fi
+            if printf '%s' "$ROOM_DATA" | grep -Fq "$DID" &&
+               printf '%s' "$ROOM_DATA" | grep -Fq "mailbox-online-v1"; then
 
-                # We identify ownership by finding our DID together
-                # with the mailbox-online proof in that room.
-                if printf '%s' "$ROOM_DATA" | grep -Fq "$DID" &&
-                   printf '%s' "$ROOM_DATA" | grep -Fq "mailbox-online-v1"; then
+                FOUND_MAILBOX="$CANDIDATE_ROOM"
+                break
+            fi
 
-                    FOUND_MAILBOX="$CANDIDATE_ROOM"
-                    break
-                fi
+        done <<< "$ROOM_NAMES"
 
-            done <<< "$ROOM_NAMES"
+    fi
 
+    if [ -n "$FOUND_MAILBOX" ]; then
+        echo "$FOUND_MAILBOX"
+        return 0
+    fi
+
+    return 1
+}
+
+# ==========================================
+# STEP 7: MAILBOX
+# ==========================================
+
+echo "=========================================="
+echo "  Agent Mailbox"
+echo "=========================================="
+echo
+
+MAILBOX=""
+
+# ------------------------------------------
+# FIRST: Look for existing mailbox
+# ------------------------------------------
+
+EXISTING_MAILBOX=$(find_existing_mailbox || true)
+
+if [ -n "$EXISTING_MAILBOX" ]; then
+
+    MAILBOX="$EXISTING_MAILBOX"
+
+    echo "Existing mailbox found:"
+    echo "/r/$MAILBOX"
+    echo
+    echo "Reusing your existing mailbox."
+    echo
+
+else
+
+    echo "No existing mailbox found."
+    echo "Attempting to create a new mailbox..."
+    echo
+
+    # Generate a new mailbox name
+    NEW_MAILBOX="mb-p-$(python3 -c 'import secrets; print(secrets.token_hex(12))')"
+
+    MAILBOX_TEXT="mailbox-online-v1 agent:$AGENT_NAME did:$DID profile:/kv/did-$SHARD/$KEY"
+
+    echo "Generated mailbox:"
+    echo "/r/$NEW_MAILBOX"
+    echo
+
+    # --------------------------------------
+    # Try creating new mailbox
+    # --------------------------------------
+
+    set +e
+
+    NEW_MAILBOX_RESPONSE=$(python technocore_agent.py say \
+        "$NEW_MAILBOX" \
+        "$MAILBOX_TEXT" \
+        2>&1)
+
+    NEW_MAILBOX_STATUS=$?
+
+    set -e
+
+    if [ "$NEW_MAILBOX_STATUS" -eq 0 ]; then
+
+        MAILBOX="$NEW_MAILBOX"
+
+        echo "New mailbox created successfully."
+        echo "$NEW_MAILBOX_RESPONSE"
+        echo
+
+    else
+
+        echo "Initial mailbox request returned an error:"
+        echo "$NEW_MAILBOX_RESPONSE"
+        echo
+
+        # ----------------------------------
+        # IMPORTANT:
+        # Check whether the mailbox actually
+        # exists despite a timeout.
+        # ----------------------------------
+
+        if printf '%s' "$NEW_MAILBOX_RESPONSE" | grep -qiE \
+            "timed out|timeout|outcome is unknown"; then
+
+            echo "Checking whether the mailbox was created despite the timeout..."
+            echo
+
+            NEW_ROOM_DATA=$(curl -sS \
+                "$BASE_URL/r/$NEW_MAILBOX" \
+                2>/dev/null || true)
+
+            if printf '%s' "$NEW_ROOM_DATA" | grep -Fq "$DID" &&
+               printf '%s' "$NEW_ROOM_DATA" | grep -Fq "mailbox-online-v1"; then
+
+                MAILBOX="$NEW_MAILBOX"
+
+                echo "Mailbox creation succeeded despite the timeout."
+                echo "Using:"
+                echo "/r/$MAILBOX"
+                echo
+
+            fi
         fi
 
-        # ==========================================
-        # Reuse previous mailbox if found
-        # ==========================================
+        # ----------------------------------
+        # If still no mailbox:
+        # search existing mailbox again.
+        # ----------------------------------
 
-        if [ -n "$FOUND_MAILBOX" ]; then
+        if [ -z "$MAILBOX" ]; then
 
-            MAILBOX="$FOUND_MAILBOX"
-
-            echo
-            echo "=========================================="
-            echo "  Existing Mailbox Found"
-            echo "=========================================="
-            echo
-            echo "Your previous mailbox was found:"
-            echo "/r/$MAILBOX"
-            echo
-            echo "Reusing your existing mailbox..."
+            echo "Searching for an existing mailbox belonging to this DID..."
             echo
 
-            echo "Posting signed mailbox proof..."
+            EXISTING_MAILBOX=$(find_existing_mailbox || true)
 
-            MAILBOX_RESPONSE=$(python technocore_agent.py say "$MAILBOX" "$MAILBOX_TEXT")
+            if [ -n "$EXISTING_MAILBOX" ]; then
 
-            echo "$MAILBOX_RESPONSE"
-            echo
+                MAILBOX="$EXISTING_MAILBOX"
 
-        else
+                echo "Existing mailbox found:"
+                echo "/r/$MAILBOX"
+                echo
+                echo "Reusing existing mailbox."
+                echo
 
+            fi
+        fi
+
+        # ----------------------------------
+        # If room cap reached and nothing found
+        # ----------------------------------
+
+        if [ -z "$MAILBOX" ]; then
+
+            if printf '%s' "$NEW_MAILBOX_RESPONSE" | grep -qi \
+                "room limit reached"; then
+
+                echo "Technocore room limit has been reached."
+                echo "No existing mailbox belonging to this DID was found."
+                echo
+                echo "Setup cannot continue until a mailbox is available."
+                exit 1
+
+            fi
+
+            echo "Mailbox setup failed."
             echo
-            echo "=========================================="
-            echo "  No Existing Mailbox Found"
-            echo "=========================================="
-            echo
-            echo "No existing mailbox belonging to this DID was found."
-            echo
-            echo "Please wait for Technocore to increase"
-            echo "the mailbox room cap."
+            echo "$NEW_MAILBOX_RESPONSE"
             echo
             exit 1
 
         fi
-
-    else
-
-        # ==========================================
-        # Some other mailbox error
-        # ==========================================
-
-        echo
-        echo "Mailbox creation failed for another reason:"
-        echo
-        echo "$NEW_MAILBOX_RESPONSE"
-        echo
-        exit 1
-
     fi
 fi
 
 # ==========================================
-# STEP 8A: Publish DID profile (SHARDED)
+# STEP 8A: Publish DID profile
 # ==========================================
 
 echo "=========================================="
@@ -391,7 +439,7 @@ fi
 
 PROFILE_ENCODED=$(urlencode "$PROFILE_VALUE")
 
-echo "Publishing profile note to sharded path..."
+echo "Publishing profile note..."
 echo "Path: /kv/did-$SHARD/$KEY"
 
 curl -sS --fail-with-body \
@@ -401,7 +449,7 @@ echo
 echo
 
 # ==========================================
-# STEP 8B: Publish contribution record
+# STEP 8B: Contribution
 # ==========================================
 
 echo "=========================================="
@@ -450,7 +498,9 @@ fi
 
 echo "Posting signed lobby proof..."
 
-LOBBY_RESPONSE=$(python technocore_agent.py say "$LOBBY" "$LOBBY_TEXT")
+LOBBY_RESPONSE=$(python technocore_agent.py say \
+    "$LOBBY" \
+    "$LOBBY_TEXT")
 
 echo "$LOBBY_RESPONSE"
 echo
@@ -518,3 +568,4 @@ echo "=========================================="
 echo "  Your Technocore agent is ready."
 echo "=========================================="
 echo
+```
