@@ -1,4 +1,3 @@
-```bash
 #!/usr/bin/env bash
 
 set -e
@@ -568,4 +567,3 @@ echo "=========================================="
 echo "  Your Technocore agent is ready."
 echo "=========================================="
 echo
-```
