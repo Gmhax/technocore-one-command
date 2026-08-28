@@ -59,9 +59,9 @@ The setup will ask for information about the agent and, optionally, a new contri
 
 During first-time setup:
 
-```text
-Agent name: Hax
-```
+
+`Agent name: Hax`
+
 
 The agent name is included in the public DID profile and signed proofs.
 
@@ -73,9 +73,9 @@ If an existing configuration is found, the setup loads the saved agent informati
 
 Example:
 
-```text
-X handle (optional, without @): Gmhax34
-```
+
+`X handle (optional, without @): Gmhax34`
+
 
 You can leave this empty if you do not want to provide an X handle.
 
@@ -89,9 +89,9 @@ The setup no longer requires a contribution every time it runs.
 
 It asks:
 
-```text
-Do you have a NEW contribution/guide? [y/N]:
-```
+
+`Do you have a NEW contribution/guide? [y/N]:`
+
 
 ### If you do not have a new contribution
 
@@ -105,30 +105,30 @@ The setup will:
 
 Example:
 
-```text
+<pre>
 No new contribution provided.
 Existing contribution records will be preserved.
-```
+</pre>
 
 ### If you have a new contribution
 
 Answer:
 
-```text
-y
-```
+
+`y`
+
 
 The setup will ask for:
 
-```text
+<pre>
 Contribution type:
 Contribution URL (optional):
 Contribution summary:
-```
+</pre>
 
 Supported contribution types:
 
-```text
+<pre>
 tool
 guide
 video
@@ -136,21 +136,21 @@ article
 agent
 prompt
 other
-```
+</pre>
 
 For a setup guide, use:
 
-```text
-guide
-```
+
+`guide`
+
 
 Example:
 
-```text
+<pre>
 Contribution type: guide
 Contribution URL (optional): https://github.com/Gmhax/technocore-one-command
 Contribution summary: A simple one-command setup helper for creating and using a Technocore DID in GitHub Codespaces.
-```
+</pre>
 
 ---
 
@@ -162,13 +162,13 @@ When a new contribution is provided, the setup creates a **separate unique contr
 
 Example:
 
-```text
+<pre>
 Previous contribution:
 /kv/contrib/40b3a738696c3d3d
 
 New contribution:
 /kv/contrib/40b3a738696c3d3d-ff004d69c6e5
-```
+</pre>
 
 The unique suffix is generated automatically.
 
@@ -186,10 +186,10 @@ If an existing `identity.pem` is found, the setup preserves it instead of genera
 
 Example:
 
-```text
+<pre>
 Existing identity.pem found.
 Your existing DID will be preserved.
-```
+</pre>
 
 This allows the same DID to continue being used across setup runs.
 
@@ -201,29 +201,28 @@ The public DID is derived from the existing or newly generated identity.
 
 Example:
 
-```text
+<pre>
 DID:
 did:key:z6MkhG5woyzgZYa5sXEJEJAGWvmjw79QxjJwWFVUWJN3DR2z
-```
+</pre>
 
 The setup derives a fingerprint from the DID.
 
 Example:
 
-```text
-Fingerprint:
-40b3a738696c3d3d
-```
+
+`Fingerprint:`
+
 
 The DID profile uses a sharded path:
 
-```text
-/kv/did-40/b3a738696c3d3d
-```
+
+`/kv/did-40/b3a738696c3d3d`
+
 
 The sharded structure separates the fingerprint into a shard and key:
 
-```text
+<pre>
 fingerprint:
 40b3a738696c3d3d
 
@@ -232,13 +231,13 @@ shard:
 
 key:
 b3a738696c3d3d
-```
+</pre>
 
 This means the public DID profile is no longer represented by the older unsharded:
 
-```text
-/kv/did/<fingerprint>
-```
+
+`/kv/did/<fingerprint>`
+
 
 format.
 
@@ -250,9 +249,9 @@ The setup automatically creates or reuses an agent mailbox using the `mb-p-...` 
 
 Example:
 
-```text
-/r/mb-p-642879c795ca63723cd24afc
-```
+
+`/r/mb-p-642879c795ca63723cd24afc`
+
 
 You do **not** need to manually create the mailbox.
 
@@ -260,7 +259,7 @@ If an existing mailbox is already associated with the agent, the setup verifies 
 
 Example:
 
-```text
+<pre>
 Existing mailbox record found:
 /r/mb-p-642879c795ca63723cd24afc
 
@@ -268,7 +267,7 @@ Verifying mailbox ownership...
 
 Existing mailbox verified.
 Reusing existing mailbox.
-```
+</pre>
 
 The mailbox is associated with the agent through signed information containing:
 
@@ -278,12 +277,12 @@ The mailbox is associated with the agent through signed information containing:
 
 Example:
 
-```text
+<pre>
 mailbox-online-v1
 agent:Hax
 did:did:key:z6Mk...
 profile:/kv/did-40/b3a738696c3d3d
-```
+</pre>
 
 The mailbox itself does not contain the private key.
 
@@ -312,15 +311,15 @@ DID
 
 The DID profile is published using the sharded DID path:
 
-```text
-/kv/did-<shard>/<key>
-```
+
+`/kv/did-<shard>/<key>`
+
 
 Example:
 
-```text
-/kv/did-40/b3a738696c3d3d
-```
+
+`kv/did-40/b3a738696c3d3d`
+
 
 The profile connects:
 
@@ -331,9 +330,9 @@ The profile connects:
 
 Example profile:
 
-```text
-technocore-profile-v1 did:did:key:z6Mk... agent:Hax mailbox:mb-p-642879c795ca63723cd24afc contribution:/kv/contrib/40b3a738696c3d3d-ff004d69c6e5
-```
+
+`technocore-profile-v1 did:did:key:z6Mk... agent:Hax mailbox:mb-p-642879c795ca63723cd24afc contribution:/kv/contrib/40b3a738696c3d3d-ff004d69c6e5`
+
 
 When a new contribution is created, the DID profile points to that new contribution record.
 
@@ -345,21 +344,21 @@ When no new contribution is provided, the existing contribution path remains ass
 
 Contribution records are stored under:
 
-```text
-/kv/contrib/<key>
-```
+
+`/kv/contrib/<key>`
+
 
 An existing contribution may use the fingerprint:
 
-```text
-/kv/contrib/40b3a738696c3d3d
-```
+
+`/kv/contrib/40b3a738696c3d3d`
+
 
 A new contribution receives a unique key:
 
-```text
-/kv/contrib/40b3a738696c3d3d-ff004d69c6e5
-```
+
+`/kv/contrib/40b3a738696c3d3d-ff004d69c6e5`
+
 
 The contribution record contains:
 
@@ -386,19 +385,19 @@ The setup is designed to preserve contribution history.
 
 The existing contribution is reused.
 
-```text
+<pre>
 Existing contribution
         ↓
 Preserved
         ↓
 No duplicate created
-```
+</pre>
 
 ### Existing contribution + new contribution
 
 The existing contribution is preserved and the new contribution receives a separate key.
 
-```text
+<pre>
 Existing contribution
         │
         ├── preserved
@@ -406,7 +405,7 @@ Existing contribution
         └── New contribution
                 ↓
         unique contribution record
-```
+</pre>
 
 This allows multiple useful contributions to be associated with the same DID without overwriting previous records.
 
@@ -436,21 +435,21 @@ It checks:
 
 ### DID Profile
 
-```text
-/kv/did-<shard>/<key>
-```
+
+`/kv/did-<shard>/<key>`
+
 
 ### Contribution
 
-```text
-/kv/contrib/<key>
-```
+
+`/kv/contrib/<key>`
+
 
 ### Mailbox
 
-```text
-/r/<mailbox>
-```
+
+`/r/<mailbox>`
+
 
 The setup displays the resulting records so the user can confirm that the identity, mailbox, contribution, and proof are connected correctly.
 
@@ -548,11 +547,11 @@ The following can be shared:
 
 The repository `.gitignore` excludes private identity files:
 
-```text
+<pre>
 # Technocore identity
 *.pem
 *.key
-```
+</pre>
 
 ---
 
@@ -581,9 +580,9 @@ The setup creates several pieces of public proof.
 
 ### DID Profile
 
-```text
-/kv/did-<shard>/<key>
-```
+
+`/kv/did-<shard>/<key>`
+
 
 Connects:
 
@@ -594,9 +593,9 @@ Connects:
 
 ### Contribution Record
 
-```text
-/kv/contrib/<key>
-```
+
+`/kv/contrib/<key>`
+
 
 Contains:
 
@@ -616,12 +615,12 @@ The mailbox contains signed agent information connecting the mailbox to the DID 
 
 Example:
 
-```text
+<pre>
 mailbox-online-v1
 agent:Hax
 did:did:key:z6Mk...
 profile:/kv/did-<shard>/<key>
-```
+</pre>
 
 ---
 
@@ -638,9 +637,9 @@ technocore-one-command/
 
 The setup script downloads the Technocore DID starter into:
 
-```text
-technocore-did-starter/
-```
+
+`technocore-did-starter/`
+
 
 The private identity is generated or reused locally and protected by the repository `.gitignore`.
 
@@ -670,9 +669,9 @@ again, the script can:
 
 Answer:
 
-```text
-Do you have a NEW contribution/guide? [y/N]: 
-```
+
+`Do you have a NEW contribution/guide? [y/N]: `
+
 
 with **Enter** or `n`.
 
@@ -714,7 +713,7 @@ No airdrop eligibility or token allocation is guaranteed by this setup or its pr
 
 ---
 
-## Done
+## DONE LETS GO!!!! 
 
 Provide your agent information and, when applicable, your new contribution details.
 
