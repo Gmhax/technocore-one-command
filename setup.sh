@@ -117,36 +117,10 @@ else
 
     read -r -p "X handle (optional, without @): " X_HANDLE
 
-    echo
-    echo "Contribution types:"
-    echo "  tool"
-    echo "  guide"
-    echo "  video"
-    echo "  article"
-    echo "  agent"
-    echo "  prompt"
-    echo "  other"
-    echo
-
-    read -r -p "Contribution type: " CONTRIBUTION_TYPE
-
-    if [ -z "$CONTRIBUTION_TYPE" ]; then
-        echo "Error: Contribution type cannot be empty."
-        exit 1
-    fi
-
-    read -r -p "Contribution URL (optional): " CONTRIBUTION_URL
-
-    read -r -p "Contribution summary: " CONTRIBUTION_SUMMARY
-
-    if [ -z "$CONTRIBUTION_SUMMARY" ]; then
-        echo "Error: Contribution summary cannot be empty."
-        exit 1
-    fi
-
-    # --------------------------------------
-    # Save configuration locally
-    # --------------------------------------
+    # Contribution is optional during initial setup.
+    CONTRIBUTION_TYPE=""
+    CONTRIBUTION_URL=""
+    CONTRIBUTION_SUMMARY=""
 
     umask 077
 
@@ -172,23 +146,77 @@ if [ -z "$AGENT_NAME" ]; then
     exit 1
 fi
 
-if [ -z "$CONTRIBUTION_TYPE" ]; then
-    echo "Error: Contribution type cannot be empty."
-    exit 1
-fi
-
-if [ -z "$CONTRIBUTION_SUMMARY" ]; then
-    echo "Error: Contribution summary cannot be empty."
-    exit 1
-fi
-
 echo
 echo "Agent:"
 echo "  Name: $AGENT_NAME"
 echo "  X:    ${X_HANDLE:-none}"
-echo "  Type: $CONTRIBUTION_TYPE"
-echo "  URL:  ${CONTRIBUTION_URL:-none}"
-echo "  Summary: $CONTRIBUTION_SUMMARY"
+echo
+
+# ------------------------------------------
+# NEW CONTRIBUTION PROMPT
+# ------------------------------------------
+# Existing contribution records are preserved.
+# A new contribution is stored separately.
+# ------------------------------------------
+
+read -r -p "Do you have a NEW contribution/guide? [y/N]: " HAS_NEW_CONTRIBUTION
+
+case "$HAS_NEW_CONTRIBUTION" in
+    y|Y|yes|YES|Yes)
+
+        echo
+        echo "Contribution types:"
+        echo "  tool"
+        echo "  guide"
+        echo "  video"
+        echo "  article"
+        echo "  agent"
+        echo "  prompt"
+        echo "  other"
+        echo
+
+        read -r -p "Contribution type: " NEW_CONTRIBUTION_TYPE
+
+        if [ -z "$NEW_CONTRIBUTION_TYPE" ]; then
+            echo "Error: Contribution type cannot be empty."
+            exit 1
+        fi
+
+        read -r -p "Contribution URL (optional): " NEW_CONTRIBUTION_URL
+        read -r -p "Contribution summary: " NEW_CONTRIBUTION_SUMMARY
+
+        if [ -z "$NEW_CONTRIBUTION_SUMMARY" ]; then
+            echo "Error: Contribution summary cannot be empty."
+            exit 1
+        fi
+
+        CONTRIBUTION_TYPE="$NEW_CONTRIBUTION_TYPE"
+        CONTRIBUTION_URL="$NEW_CONTRIBUTION_URL"
+        CONTRIBUTION_SUMMARY="$NEW_CONTRIBUTION_SUMMARY"
+        HAS_NEW_CONTRIBUTION="yes"
+
+        ;;
+
+    *)
+        HAS_NEW_CONTRIBUTION="no"
+
+        echo
+        echo "No new contribution provided."
+        echo "Existing contribution records will be preserved."
+        echo
+
+        ;;
+esac
+
+echo
+echo "Contribution input:"
+if [ "$HAS_NEW_CONTRIBUTION" = "yes" ]; then
+    echo "  Type: $CONTRIBUTION_TYPE"
+    echo "  URL:  ${CONTRIBUTION_URL:-none}"
+    echo "  Summary: $CONTRIBUTION_SUMMARY"
+else
+    echo "  No new contribution."
+fi
 echo
 
 # ==========================================
@@ -495,7 +523,33 @@ echo "=========================================="
 echo
 
 DID_PATH="$BASE_URL/kv/did-$SHARD/$KEY"
-CONTRIB_PATH="$BASE_URL/kv/contrib/$FP"
+
+# ------------------------------------------
+# Contribution paths
+# ------------------------------------------
+# The original contribution record is preserved.
+# New contributions receive their own unique key.
+# ------------------------------------------
+
+LEGACY_CONTRIB_PATH="$BASE_URL/kv/contrib/$FP"
+CONTRIB_PATH="$LEGACY_CONTRIB_PATH"
+
+if [ "${HAS_NEW_CONTRIBUTION:-no}" = "yes" ]; then
+
+    NEW_CONTRIB_SUFFIX=$(python3 -c 'import secrets; print(secrets.token_hex(6))')
+    NEW_CONTRIB_KEY="${FP}-${NEW_CONTRIB_SUFFIX}"
+
+    CONTRIB_PATH="$BASE_URL/kv/contrib/$NEW_CONTRIB_KEY"
+
+    echo
+    echo "New contribution record will use:"
+    echo "  $CONTRIB_PATH"
+    echo
+    echo "Previous contribution will be preserved:"
+    echo "  $LEGACY_CONTRIB_PATH"
+    echo
+
+fi
 
 # ------------------------------------------
 # Check existing DID profile
@@ -533,32 +587,28 @@ echo
 
 echo "[2/4] Checking contribution..."
 
-EXISTING_CONTRIBUTION=$(curl -sS "$CONTRIB_PATH" 2>/dev/null || true)
+# Always inspect the legacy contribution record.
+# A new contribution must never overwrite this record.
+
+EXISTING_CONTRIBUTION=$(curl -sS "$LEGACY_CONTRIB_PATH" 2>/dev/null || true)
 
 if printf '%s' "$EXISTING_CONTRIBUTION" | grep -Fq "did:$DID" &&
    printf '%s' "$EXISTING_CONTRIBUTION" | grep -Fq "agent:$AGENT_NAME"; then
 
-    if [ -n "$CONTRIBUTION_URL" ]; then
+    HAS_CONTRIBUTION="yes"
 
-        if printf '%s' "$EXISTING_CONTRIBUTION" | grep -Fq "url:$CONTRIBUTION_URL"; then
-            HAS_CONTRIBUTION="yes"
-            echo "      Existing matching contribution found."
-        else
-            HAS_CONTRIBUTION="no"
-            echo "      Contribution exists, but URL differs."
-        fi
-
-    else
-
-        HAS_CONTRIBUTION="yes"
-        echo "      Existing matching contribution found."
-
-    fi
+    echo "      Existing contribution found."
+    echo "      Legacy contribution will be preserved."
 
 else
 
     HAS_CONTRIBUTION="no"
-    echo "      No matching contribution found."
+
+    if [ -n "$EXISTING_CONTRIBUTION" ]; then
+        echo "      Contribution record exists, but does not match this agent."
+    else
+        echo "      No existing contribution found."
+    fi
 
 fi
 
@@ -635,7 +685,7 @@ echo "  DID Profile"
 echo "=========================================="
 echo
 
-if [ "$HAS_PROFILE" = "yes" ]; then
+if [ "$HAS_PROFILE" = "yes" ] && [ "${HAS_NEW_CONTRIBUTION:-no}" != "yes" ]; then
 
     echo "Existing DID profile detected."
     echo "Reusing existing DID profile."
@@ -644,13 +694,19 @@ if [ "$HAS_PROFILE" = "yes" ]; then
 
 else
 
-    PROFILE_VALUE="technocore-profile-v1 did:$DID agent:$AGENT_NAME mailbox:$MAILBOX contribution:/kv/contrib/$FP"
+    PROFILE_CONTRIB_PATH="/kv/contrib/$FP"
+
+    if [ "${HAS_NEW_CONTRIBUTION:-no}" = "yes" ]; then
+        PROFILE_CONTRIB_PATH="${CONTRIB_PATH#$BASE_URL}"
+    fi
+
+    PROFILE_VALUE="technocore-profile-v1 did:$DID agent:$AGENT_NAME mailbox:$MAILBOX contribution:$PROFILE_CONTRIB_PATH"
 
     if [ -n "$X_HANDLE" ]; then
         PROFILE_VALUE="$PROFILE_VALUE x:@$X_HANDLE"
     fi
 
-    if [ -n "$CONTRIBUTION_URL" ]; then
+    if [ "${HAS_NEW_CONTRIBUTION:-no}" = "yes" ] && [ -n "$CONTRIBUTION_URL" ]; then
         PROFILE_VALUE="$PROFILE_VALUE guide:$CONTRIBUTION_URL"
     fi
 
@@ -722,14 +778,7 @@ echo "  Contribution"
 echo "=========================================="
 echo
 
-if [ "$HAS_CONTRIBUTION" = "yes" ]; then
-
-    echo "Existing contribution detected."
-    echo "Reusing existing contribution."
-    echo
-    echo "$EXISTING_CONTRIBUTION"
-
-else
+if [ "${HAS_NEW_CONTRIBUTION:-no}" = "yes" ]; then
 
     CONTRIBUTION_VALUE="technocore-contribution-v1 did:$DID agent:$AGENT_NAME type:$CONTRIBUTION_TYPE summary:$CONTRIBUTION_SUMMARY"
 
@@ -743,16 +792,31 @@ else
 
     CONTRIBUTION_ENCODED=$(urlencode "$CONTRIBUTION_VALUE")
 
-    echo "No contribution found."
+    echo "New contribution provided."
     echo "Publishing new contribution..."
-    echo "Path: /kv/contrib/$FP"
+    echo "Path: $CONTRIB_PATH"
+    echo
+    echo "Previous contribution remains preserved:"
+    echo "  $LEGACY_CONTRIB_PATH"
     echo
 
-    curl -sS --fail-with-body \
-        "$CONTRIB_PATH/set/$CONTRIBUTION_ENCODED"
+    curl -sS --fail-with-body         "$CONTRIB_PATH/set/$CONTRIBUTION_ENCODED"
 
     echo
-    echo "Contribution created."
+    echo "New contribution created."
+
+else
+
+    if [ "$HAS_CONTRIBUTION" = "yes" ]; then
+        echo "No new contribution provided."
+        echo "Existing contribution preserved and reused."
+        echo
+        echo "$EXISTING_CONTRIBUTION"
+    else
+        echo "No new contribution provided."
+        echo "No existing contribution to publish."
+    fi
+
 fi
 
 echo
@@ -774,9 +838,15 @@ if [ "$HAS_LOBBY_PROOF" = "yes" ]; then
 
 else
 
-    LOBBY_TEXT="technocore-proof-v1 agent:$AGENT_NAME did:$DID mailbox:$MAILBOX contribution:/kv/contrib/$FP"
+    LOBBY_CONTRIB_PATH="/kv/contrib/$FP"
 
-    if [ -n "$CONTRIBUTION_URL" ]; then
+    if [ "${HAS_NEW_CONTRIBUTION:-no}" = "yes" ]; then
+        LOBBY_CONTRIB_PATH="${CONTRIB_PATH#$BASE_URL}"
+    fi
+
+    LOBBY_TEXT="technocore-proof-v1 agent:$AGENT_NAME did:$DID mailbox:$MAILBOX contribution:$LOBBY_CONTRIB_PATH"
+
+    if [ "${HAS_NEW_CONTRIBUTION:-no}" = "yes" ] && [ -n "$CONTRIBUTION_URL" ]; then
         LOBBY_TEXT="$LOBBY_TEXT guide:$CONTRIBUTION_URL"
     fi
 
@@ -846,7 +916,7 @@ echo "  /kv/did-$SHARD/$KEY"
 echo
 
 echo "Contribution:"
-echo "  /kv/contrib/$FP"
+echo "  $CONTRIB_PATH"
 echo
 
 echo "Mailbox:"
