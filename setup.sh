@@ -2,7 +2,7 @@
 
 set -e
 
-REPO_URL="https://github.com/zunmax/technocore-did-starter.git"
+REPO_URL="https://github.com/Gmhax/technocore-one-command.git"
 INSTALL_DIR="technocore-did-starter"
 LOBBY="lobby"
 BASE_URL="https://technocore.chat"
