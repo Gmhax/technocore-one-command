@@ -87,36 +87,95 @@ echo "  Agent Information"
 echo "=========================================="
 echo
 
-read -r -p "Agent name: " AGENT_NAME
+CONFIG_FILE=".agent-config"
+
+# ------------------------------------------
+# Load existing configuration if available
+# ------------------------------------------
+
+if [ -f "$CONFIG_FILE" ]; then
+
+    echo "Existing agent configuration found."
+    echo "Loading saved agent information..."
+    echo
+
+    # shellcheck disable=SC1090
+    source "$CONFIG_FILE"
+
+else
+
+    echo "No existing agent configuration found."
+    echo "Enter your agent information."
+    echo
+
+    read -r -p "Agent name: " AGENT_NAME
+
+    if [ -z "$AGENT_NAME" ]; then
+        echo "Error: Agent name cannot be empty."
+        exit 1
+    fi
+
+    read -r -p "X handle (optional, without @): " X_HANDLE
+
+    echo
+    echo "Contribution types:"
+    echo "  tool"
+    echo "  guide"
+    echo "  video"
+    echo "  article"
+    echo "  agent"
+    echo "  prompt"
+    echo "  other"
+    echo
+
+    read -r -p "Contribution type: " CONTRIBUTION_TYPE
+
+    if [ -z "$CONTRIBUTION_TYPE" ]; then
+        echo "Error: Contribution type cannot be empty."
+        exit 1
+    fi
+
+    read -r -p "Contribution URL (optional): " CONTRIBUTION_URL
+
+    read -r -p "Contribution summary: " CONTRIBUTION_SUMMARY
+
+    if [ -z "$CONTRIBUTION_SUMMARY" ]; then
+        echo "Error: Contribution summary cannot be empty."
+        exit 1
+    fi
+
+    # --------------------------------------
+    # Save configuration locally
+    # --------------------------------------
+
+    umask 077
+
+    cat > "$CONFIG_FILE" <<EOF
+AGENT_NAME=$(printf '%q' "$AGENT_NAME")
+X_HANDLE=$(printf '%q' "$X_HANDLE")
+CONTRIBUTION_TYPE=$(printf '%q' "$CONTRIBUTION_TYPE")
+CONTRIBUTION_URL=$(printf '%q' "$CONTRIBUTION_URL")
+CONTRIBUTION_SUMMARY=$(printf '%q' "$CONTRIBUTION_SUMMARY")
+EOF
+
+    echo
+    echo "Agent configuration saved locally."
+
+fi
+
+# ------------------------------------------
+# Validate loaded configuration
+# ------------------------------------------
 
 if [ -z "$AGENT_NAME" ]; then
     echo "Error: Agent name cannot be empty."
     exit 1
 fi
 
-read -r -p "X handle (optional, without @): " X_HANDLE
-
-echo
-echo "Contribution types:"
-echo "  tool"
-echo "  guide"
-echo "  video"
-echo "  article"
-echo "  agent"
-echo "  prompt"
-echo "  other"
-echo
-
-read -r -p "Contribution type: " CONTRIBUTION_TYPE
-
 if [ -z "$CONTRIBUTION_TYPE" ]; then
     echo "Error: Contribution type cannot be empty."
     exit 1
 fi
-
-read -r -p "Contribution URL (optional): " CONTRIBUTION_URL
-
-read -r -p "Contribution summary: " CONTRIBUTION_SUMMARY
 
 if [ -z "$CONTRIBUTION_SUMMARY" ]; then
     echo "Error: Contribution summary cannot be empty."
@@ -129,6 +188,7 @@ echo "  Name: $AGENT_NAME"
 echo "  X:    ${X_HANDLE:-none}"
 echo "  Type: $CONTRIBUTION_TYPE"
 echo "  URL:  ${CONTRIBUTION_URL:-none}"
+echo "  Summary: $CONTRIBUTION_SUMMARY"
 echo
 
 # ==========================================
