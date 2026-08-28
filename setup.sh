@@ -418,109 +418,292 @@ else
 fi
 
 # ==========================================
-# STEP 8A: Publish DID profile
+# STEP 8: EXISTING RECORD DETECTION
 # ==========================================
 
 echo "=========================================="
-echo "  Publishing DID Profile (Sharded)"
+echo "  Checking Existing Technocore Records"
 echo "=========================================="
 echo
 
-PROFILE_VALUE="technocore-profile-v1 did:$DID agent:$AGENT_NAME mailbox:$MAILBOX contribution:/kv/contrib/$FP"
+DID_PATH="$BASE_URL/kv/did-$SHARD/$KEY"
+CONTRIB_PATH="$BASE_URL/kv/contrib/$FP"
 
-if [ -n "$X_HANDLE" ]; then
-    PROFILE_VALUE="$PROFILE_VALUE x:@$X_HANDLE"
+# ------------------------------------------
+# Check existing DID profile
+# ------------------------------------------
+
+echo "[1/4] Checking DID profile..."
+
+EXISTING_PROFILE=$(curl -sS "$DID_PATH" 2>/dev/null || true)
+
+if printf '%s' "$EXISTING_PROFILE" | grep -Fq "did:$DID" &&
+   printf '%s' "$EXISTING_PROFILE" | grep -Fq "agent:$AGENT_NAME"; then
+
+    HAS_PROFILE="yes"
+    echo "      Existing matching DID profile found."
+
+else
+
+    HAS_PROFILE="no"
+    echo "      No matching DID profile found."
+
 fi
 
-if [ -n "$CONTRIBUTION_URL" ]; then
-    PROFILE_VALUE="$PROFILE_VALUE guide:$CONTRIBUTION_URL"
+echo
+
+# ------------------------------------------
+# Check existing contribution
+# ------------------------------------------
+
+echo "[2/4] Checking contribution..."
+
+EXISTING_CONTRIBUTION=$(curl -sS "$CONTRIB_PATH" 2>/dev/null || true)
+
+if printf '%s' "$EXISTING_CONTRIBUTION" | grep -Fq "did:$DID" &&
+   printf '%s' "$EXISTING_CONTRIBUTION" | grep -Fq "agent:$AGENT_NAME"; then
+
+    if [ -n "$CONTRIBUTION_URL" ]; then
+
+        if printf '%s' "$EXISTING_CONTRIBUTION" | grep -Fq "url:$CONTRIBUTION_URL"; then
+            HAS_CONTRIBUTION="yes"
+            echo "      Existing matching contribution found."
+        else
+            HAS_CONTRIBUTION="no"
+            echo "      Contribution exists, but URL differs."
+        fi
+
+    else
+
+        HAS_CONTRIBUTION="yes"
+        echo "      Existing matching contribution found."
+
+    fi
+
+else
+
+    HAS_CONTRIBUTION="no"
+    echo "      No matching contribution found."
+
 fi
 
-PROFILE_ENCODED=$(urlencode "$PROFILE_VALUE")
-
-echo "Publishing profile note..."
-echo "Path: /kv/did-$SHARD/$KEY"
-
-curl -sS --fail-with-body \
-    "$BASE_URL/kv/did-$SHARD/$KEY/set/$PROFILE_ENCODED"
-
-echo
 echo
 
-# ==========================================
-# STEP 8B: Contribution
-# ==========================================
+# ------------------------------------------
+# Mailbox was already resolved above
+# ------------------------------------------
 
-echo "=========================================="
-echo "  Registering Contribution"
-echo "=========================================="
-echo
+echo "[3/4] Mailbox..."
 
-CONTRIBUTION_VALUE="technocore-contribution-v1 did:$DID agent:$AGENT_NAME type:$CONTRIBUTION_TYPE summary:$CONTRIBUTION_SUMMARY"
-
-if [ -n "$CONTRIBUTION_URL" ]; then
-    CONTRIBUTION_VALUE="$CONTRIBUTION_VALUE url:$CONTRIBUTION_URL"
+if [ -n "$MAILBOX" ]; then
+    echo "      Using existing/resolved mailbox: $MAILBOX"
+else
+    echo "      No mailbox available."
+    exit 1
 fi
 
-if [ -n "$X_HANDLE" ]; then
-    CONTRIBUTION_VALUE="$CONTRIBUTION_VALUE x:@$X_HANDLE"
+echo
+
+# ------------------------------------------
+# Check lobby for existing proof
+# ------------------------------------------
+
+echo "[4/4] Checking lobby proof..."
+
+HAS_LOBBY_PROOF="no"
+LOBBY_SINCE=""
+
+while true; do
+
+    if [ -n "$LOBBY_SINCE" ]; then
+        LOBBY_CHECK=$(curl -sS \
+            "$BASE_URL/r/$LOBBY?since=$LOBBY_SINCE" \
+            2>/dev/null || true)
+    else
+        LOBBY_CHECK=$(curl -sS \
+            "$BASE_URL/r/$LOBBY?limit=100" \
+            2>/dev/null || true)
+    fi
+
+    if printf '%s' "$LOBBY_CHECK" | grep -Fq "did:$DID" &&
+       printf '%s' "$LOBBY_CHECK" | grep -Fq "technocore-proof-v1"; then
+
+        HAS_LOBBY_PROOF="yes"
+        echo "      Existing lobby proof found."
+        break
+
+    fi
+
+    NEXT_SINCE=$(printf '%s' "$LOBBY_CHECK" | \
+        sed -n 's/.*next: \/r\/[^?]*?since=\([0-9]*\).*/\1/p' | \
+        tail -1)
+
+    if [ -z "$NEXT_SINCE" ] || [ "$NEXT_SINCE" = "$LOBBY_SINCE" ]; then
+        break
+    fi
+
+    LOBBY_SINCE="$NEXT_SINCE"
+done
+
+if [ "$HAS_LOBBY_PROOF" = "no" ]; then
+    echo "      No existing lobby proof found."
 fi
 
-CONTRIBUTION_ENCODED=$(urlencode "$CONTRIBUTION_VALUE")
-
-echo "Publishing contribution record..."
-
-curl -sS --fail-with-body \
-    "$BASE_URL/kv/contrib/$FP/set/$CONTRIBUTION_ENCODED"
-
-echo
 echo
 
 # ==========================================
-# STEP 8C: Signed lobby proof
+# STEP 8A: DID PROFILE
 # ==========================================
 
 echo "=========================================="
-echo "  Publishing Lobby Proof"
+echo "  DID Profile"
 echo "=========================================="
 echo
 
-LOBBY_TEXT="technocore-proof-v1 agent:$AGENT_NAME did:$DID mailbox:$MAILBOX contribution:/kv/contrib/$FP"
+if [ "$HAS_PROFILE" = "yes" ]; then
 
-if [ -n "$CONTRIBUTION_URL" ]; then
-    LOBBY_TEXT="$LOBBY_TEXT guide:$CONTRIBUTION_URL"
+    echo "Existing DID profile detected."
+    echo "Reusing existing DID profile."
+    echo
+    echo "$EXISTING_PROFILE"
+
+else
+
+    PROFILE_VALUE="technocore-profile-v1 did:$DID agent:$AGENT_NAME mailbox:$MAILBOX contribution:/kv/contrib/$FP"
+
+    if [ -n "$X_HANDLE" ]; then
+        PROFILE_VALUE="$PROFILE_VALUE x:@$X_HANDLE"
+    fi
+
+    if [ -n "$CONTRIBUTION_URL" ]; then
+        PROFILE_VALUE="$PROFILE_VALUE guide:$CONTRIBUTION_URL"
+    fi
+
+    PROFILE_ENCODED=$(urlencode "$PROFILE_VALUE")
+
+    echo "No DID profile found."
+    echo "Publishing new DID profile..."
+    echo "Path: /kv/did-$SHARD/$KEY"
+    echo
+
+    curl -sS --fail-with-body \
+        "$DID_PATH/set/$PROFILE_ENCODED"
+
+    echo
+    echo "DID profile created."
 fi
 
-if [ -n "$X_HANDLE" ]; then
-    LOBBY_TEXT="$LOBBY_TEXT x:@$X_HANDLE"
+echo
+
+# ==========================================
+# STEP 8B: CONTRIBUTION
+# ==========================================
+
+echo "=========================================="
+echo "  Contribution"
+echo "=========================================="
+echo
+
+if [ "$HAS_CONTRIBUTION" = "yes" ]; then
+
+    echo "Existing contribution detected."
+    echo "Reusing existing contribution."
+    echo
+    echo "$EXISTING_CONTRIBUTION"
+
+else
+
+    CONTRIBUTION_VALUE="technocore-contribution-v1 did:$DID agent:$AGENT_NAME type:$CONTRIBUTION_TYPE summary:$CONTRIBUTION_SUMMARY"
+
+    if [ -n "$CONTRIBUTION_URL" ]; then
+        CONTRIBUTION_VALUE="$CONTRIBUTION_VALUE url:$CONTRIBUTION_URL"
+    fi
+
+    if [ -n "$X_HANDLE" ]; then
+        CONTRIBUTION_VALUE="$CONTRIBUTION_VALUE x:@$X_HANDLE"
+    fi
+
+    CONTRIBUTION_ENCODED=$(urlencode "$CONTRIBUTION_VALUE")
+
+    echo "No contribution found."
+    echo "Publishing new contribution..."
+    echo "Path: /kv/contrib/$FP"
+    echo
+
+    curl -sS --fail-with-body \
+        "$CONTRIB_PATH/set/$CONTRIBUTION_ENCODED"
+
+    echo
+    echo "Contribution created."
 fi
 
-echo "Posting signed lobby proof..."
-
-LOBBY_RESPONSE=$(python technocore_agent.py say \
-    "$LOBBY" \
-    "$LOBBY_TEXT")
-
-echo "$LOBBY_RESPONSE"
 echo
 
 # ==========================================
-# Verify DID profile
+# STEP 8C: SIGNED LOBBY PROOF
 # ==========================================
 
 echo "=========================================="
-echo "  Verifying DID Profile"
+echo "  Lobby Proof"
 echo "=========================================="
 echo
 
-curl -sS \
-    "$BASE_URL/kv/did-$SHARD/$KEY"
+if [ "$HAS_LOBBY_PROOF" = "yes" ]; then
 
+    echo "Existing lobby proof detected."
+    echo "Reusing existing lobby proof."
+    echo
+
+else
+
+    LOBBY_TEXT="technocore-proof-v1 agent:$AGENT_NAME did:$DID mailbox:$MAILBOX contribution:/kv/contrib/$FP"
+
+    if [ -n "$CONTRIBUTION_URL" ]; then
+        LOBBY_TEXT="$LOBBY_TEXT guide:$CONTRIBUTION_URL"
+    fi
+
+    if [ -n "$X_HANDLE" ]; then
+        LOBBY_TEXT="$LOBBY_TEXT x:@$X_HANDLE"
+    fi
+
+    echo "No existing lobby proof found."
+    echo "Posting signed lobby proof..."
+    echo
+
+    LOBBY_RESPONSE=$(python technocore_agent.py say \
+        "$LOBBY" \
+        "$LOBBY_TEXT")
+
+    echo "$LOBBY_RESPONSE"
+    echo
+fi
+
+# ==========================================
+# VERIFY RECORDS
+# ==========================================
+
+echo "=========================================="
+echo "  Verifying Technocore Records"
+echo "=========================================="
+echo
+
+echo "[DID PROFILE]"
+curl -sS "$DID_PATH"
+echo
+echo
+
+echo "[CONTRIBUTION]"
+curl -sS "$CONTRIB_PATH"
+echo
+echo
+
+echo "[MAILBOX]"
+curl -sS "$BASE_URL/r/$MAILBOX"
 echo
 echo
 
 # ==========================================
-# Final output
+# FINAL OUTPUT
 # ==========================================
 
 echo "=========================================="
@@ -540,21 +723,22 @@ echo "Fingerprint:"
 echo "  $FP"
 echo
 
-echo "Sharded DID Profile:"
-echo "  $BASE_URL/kv/did-$SHARD/$KEY"
+echo "DID profile:"
+echo "  /kv/did-$SHARD/$KEY"
 echo
 
 echo "Contribution:"
-echo "  $BASE_URL/kv/contrib/$FP"
+echo "  /kv/contrib/$FP"
 echo
 
 echo "Mailbox:"
-echo "  $BASE_URL/r/$MAILBOX"
+echo "  /r/$MAILBOX"
 echo
 
 echo "Lobby:"
-echo "  $BASE_URL/r/$LOBBY"
+echo "  /r/$LOBBY"
 echo
+
 
 echo "IMPORTANT:"
 echo "- Keep identity.pem private."
