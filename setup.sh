@@ -974,14 +974,14 @@ fi
 if [ -f "$AGENT_KEY_PATH" ] && [ -f "$AGENT_PY" ]; then
   echo "Posting activation message to /r/kibble on technocore.chat ..."
   set +e
-  "$PYTHON_BIN" "$AGENT_PY" say kibble "Hax online — setup complete, agent active" --key "$AGENT_KEY_PATH"
+  "$PYTHON_BIN" "$AGENT_PY" say kibble "Agent online — setup complete, agent active" --key "$AGENT_KEY_PATH"
   ACT_STATUS=$?
   set -e
   if [ "$ACT_STATUS" -eq 0 ]; then
     echo "Activation post OK — DID should show ACTIVE on Live Workstream."
   else
     echo "WARNING: activation post failed. You can post manually later:"
-    echo "  python technocore_agent.py say kibble \"Hax online\" --key technocore-did-starter/identity.pem"
+    echo "  python technocore_agent.py say kibble \"Agent online\" --key technocore-did-starter/identity.pem"
   fi
 else
   echo "WARNING: cannot activation-post (missing agent or key)."
@@ -1006,7 +1006,7 @@ echo
 export IDENTITY_PASS
 for ROOM in lobby technocore flop kibble; do
   echo "Activation post: /$ROOM"
-  IDENTITY_PASS="$IDENTITY_PASS" KEY_PATH="$AGENT_KEY_PATH" AGENT_PY="$AGENT_PY" ROOM="$ROOM" MSG="Hax online — setup complete" \
+  IDENTITY_PASS="$IDENTITY_PASS" KEY_PATH="$AGENT_KEY_PATH" AGENT_PY="$AGENT_PY" ROOM="$ROOM" MSG="Agent online — setup complete" \
     "$PYTHON_BIN" -c 'import getpass,os,sys,runpy; getpass.getpass=lambda prompt="": os.environ.get("IDENTITY_PASS",""); sys.argv=[os.environ["AGENT_PY"],"say",os.environ["ROOM"],os.environ["MSG"],"--key",os.environ["KEY_PATH"]]; runpy.run_path(os.environ["AGENT_PY"], run_name="__main__")' \
     || echo "WARNING: activation failed for $ROOM"
   sleep 2

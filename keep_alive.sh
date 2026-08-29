@@ -26,7 +26,7 @@ while true; do
   TS=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
   for ROOM in "${ROOMS[@]}"; do
     echo "[$TS] /$ROOM ..."
-    post_room "$ROOM" "Hax heartbeat $TS" || echo "FAIL /$ROOM"
+    post_room "$ROOM" "Agent heartbeat $TS" || echo "FAIL /$ROOM"
     sleep 8
   done
   sleep "$INTERVAL"
