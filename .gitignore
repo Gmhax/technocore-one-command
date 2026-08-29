@@ -7,6 +7,12 @@ __pycache__/
 # Technocore identity
 *.pem
 *.key
+.passphrase
+**/identity.pem
+**/.passphrase
+*.pem
+keep_alive.pid
+keep_alive.log
 
 # Local files
 .env

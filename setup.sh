@@ -989,95 +989,40 @@ fi
 echo
 
 # ==========================================
-# KEEP-ALIVE + ACTIVATION (auto)
-# ==========================================
-# Goal: after setup, DID is active and localhost starts.
-# keep-alive runs in background; Live Workstream runs in foreground.
 
+# KEEP-ALIVE + ACTIVATION (auto)
 KEEPALIVE_SCRIPT="$ROOT_DIR/keep_alive.sh"
 AGENT_KEY_PATH="$INSTALL_DIR/identity.pem"
 AGENT_PY="$INSTALL_DIR/technocore_agent.py"
-
 if [ -x "$INSTALL_DIR/.venv/bin/python" ]; then
   PYTHON_BIN="$INSTALL_DIR/.venv/bin/python"
 else
   PYTHON_BIN="python3"
 fi
-
-# --- Create keep_alive.sh ---
-cat > "$KEEPALIVE_SCRIPT" << EOF
-#!/usr/bin/env bash
-set -euo pipefail
-
-KEY="$AGENT_KEY_PATH"
-ROOM="\${ROOM:-kibble}"
-INTERVAL="\${INTERVAL:-180}"
-AGENT_PY="$AGENT_PY"
-
-if [ -x "$INSTALL_DIR/.venv/bin/python" ]; then
-  PYTHON="$INSTALL_DIR/.venv/bin/python"
-else
-  PYTHON="python3"
-fi
-
-echo "Technocore keep-alive"
-echo "  key:      \$KEY"
-echo "  room:     /\$ROOM"
-echo "  interval: \${INTERVAL}s"
-echo "Press Ctrl+C to stop."
+echo "Type identity passphrase ONCE (hidden):"
+read -r -s IDENTITY_PASS
 echo
-
-while true; do
-  TS=\$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-  MSG="Hax heartbeat \$TS"
-  echo "[\$TS] posting to /\$ROOM ..."
-  "\$PYTHON" "\$AGENT_PY" say "\$ROOM" "\$MSG" --key "\$KEY" || {
-    echo "Post failed (passphrase/network). Retrying in \${INTERVAL}s..."
-  }
-  sleep "\$INTERVAL"
+[ -n "$IDENTITY_PASS" ] || exit 1
+export IDENTITY_PASS
+for ROOM in lobby technocore flop kibble; do
+  echo "Activation post: /$ROOM"
+  IDENTITY_PASS="$IDENTITY_PASS" KEY_PATH="$AGENT_KEY_PATH" AGENT_PY="$AGENT_PY" ROOM="$ROOM" MSG="Hax online — setup complete" \
+    "$PYTHON_BIN" -c 'import getpass,os,sys,runpy; getpass.getpass=lambda prompt="": os.environ.get("IDENTITY_PASS",""); sys.argv=[os.environ["AGENT_PY"],"say",os.environ["ROOM"],os.environ["MSG"],"--key",os.environ["KEY_PATH"]]; runpy.run_path(os.environ["AGENT_PY"], run_name="__main__")' \
+    || echo "WARNING: activation failed for $ROOM"
+  sleep 2
 done
-EOF
-
-chmod +x "$KEEPALIVE_SCRIPT"
-echo "Keep-alive helper created: $KEEPALIVE_SCRIPT"
-echo
-
-# --- One activation post so DID is ACTIVE when visualizer opens ---
-echo "Posting activation message to /r/kibble ..."
-set +e
-"$PYTHON_BIN" "$AGENT_PY" say kibble "Hax online — setup complete, agent active" --key "$AGENT_KEY_PATH"
-ACT_STATUS=$?
-set -e
-
-if [ "$ACT_STATUS" -eq 0 ]; then
-  echo "Activation post OK."
-else
-  echo "WARNING: activation post failed (check passphrase/network)."
-  echo "You can still post later with:"
-  echo "  $KEEPALIVE_SCRIPT"
+if [ -f "$ROOT_DIR/keep_alive.pid" ]; then
+  kill "$(cat "$ROOT_DIR/keep_alive.pid")" 2>/dev/null || true
 fi
-echo
-
-# --- Start keep-alive in background ---
-echo "Starting keep-alive in background (every 180s)..."
-echo "Logs: $ROOT_DIR/keep_alive.log"
+echo "Starting keep-alive..."
 (
   cd "$ROOT_DIR"
-  nohup "$KEEPALIVE_SCRIPT" > "$ROOT_DIR/keep_alive.log" 2>&1 &
+  nohup env IDENTITY_PASS="$IDENTITY_PASS" "$KEEPALIVE_SCRIPT" > "$ROOT_DIR/keep_alive.log" 2>&1 &
   echo $! > "$ROOT_DIR/keep_alive.pid"
 )
-sleep 1
-if [ -f "$ROOT_DIR/keep_alive.pid" ]; then
-  echo "Keep-alive PID: $(cat "$ROOT_DIR/keep_alive.pid")"
-  echo "Stop later with: kill \$(cat $ROOT_DIR/keep_alive.pid)"
-fi
-echo
-echo "NOTE: if identity.pem is passphrase-protected, background"
-echo "posts may fail until passphrase handling is non-interactive."
-echo "Activation post above still makes the DID active right away."
-echo
+echo "Keep-alive PID: $(cat "$ROOT_DIR/keep_alive.pid")"
+unset IDENTITY_PASS
 
-# ==========================================
 # STEP 9: LIVE WORKSTREAM
 # ==========================================
 
