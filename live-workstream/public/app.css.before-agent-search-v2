@@ -1,0 +1,745 @@
+/*
+ * Palette, type and spacing follow the published FLOP design system
+ * (flop.finance/design.md and flop.finance/brand). The six canonical colours
+ * and the five derived tokens are the whole palette; nothing else is invented.
+ */
+:root {
+  color-scheme: dark;
+
+  /* Canonical six */
+  --base: #0a1128;
+  --grey: #5c6670;
+  --blue: #0466c8;
+  --accent: #00b4d8;
+  --green: #32d74b;
+  --ice: #f5f7fa;
+  /* Semantic seventh: operational failure only */
+  --error: #ff453a;
+
+  /* Derived tokens: the only permitted extensions */
+  --surface: #151d32;
+  --border: #232a3e;
+  --text-2: #a1a7ae;
+  --accent-hover: #3dc5e0;
+
+  --mono: "Space Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  --r-sm: 2px;
+  --r-md: 4px;
+  --r-lg: 8px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  /* No gradients: the design system builds depth by tonal layering only. */
+  background: var(--base);
+  color: var(--ice);
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+h1,
+h2,
+h3,
+p,
+ol,
+figure {
+  margin: 0;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.shell {
+  width: min(1520px, 100% - 32px);
+  margin: 0 auto;
+  padding: 24px 0 40px;
+  display: grid;
+  gap: 16px;
+}
+
+/* ---------- Masthead ---------- */
+
+.masthead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.identity {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  min-width: 0;
+}
+
+/*
+ * The Chip is used unmodified on its own ground: no border, no glow, no
+ * filter, and clear space around it, per the logo usage standards.
+ */
+.chip-plate {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 68px;
+  height: 68px;
+  padding: 12px;
+  border-radius: var(--r-md);
+  background: #000;
+}
+
+.chip-plate img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.identity-text {
+  min-width: 0;
+}
+
+h1 {
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: clamp(20px, 2.6vw, 32px);
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  /* Space Mono is wide; without this the title sets the page's minimum width. */
+  overflow-wrap: break-word;
+}
+
+.standfirst {
+  max-width: 62ch;
+  margin-top: 6px;
+  color: var(--text-2);
+  font-size: 14px;
+}
+
+.standfirst strong {
+  color: var(--ice);
+  font-weight: 600;
+}
+
+.masthead-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 0 0 auto;
+}
+
+.field-select {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.field-select span {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-2);
+  text-transform: uppercase;
+}
+
+select,
+.button {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+select {
+  min-width: 150px;
+}
+
+.button {
+  color: var(--text-2);
+  transition: border-color 120ms ease, color 120ms ease, background 120ms ease;
+}
+
+.button:hover {
+  border-color: var(--grey);
+  color: var(--ice);
+}
+
+/* Cyan fill with Base text is the system's primary button. */
+.button.is-active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--base);
+  font-weight: 700;
+}
+
+/* ---------- Explainer ---------- */
+
+.explainer {
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+
+.explainer h2 {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.explainer-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 12px;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+
+.explainer-steps li {
+  position: relative;
+  padding-left: 30px;
+  color: var(--text-2);
+  font-size: 13px;
+  counter-increment: step;
+}
+
+.explainer-steps li::before {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: grid;
+  place-items: center;
+  width: 21px;
+  height: 21px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--base);
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 11px;
+  content: counter(step);
+}
+
+.explainer-steps b {
+  display: block;
+  color: var(--ice);
+  font-weight: 600;
+}
+
+.explainer-note {
+  max-width: 96ch;
+  margin-top: 12px;
+  color: var(--text-2);
+  font-size: 13px;
+}
+
+/* ---------- Tiles ---------- */
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.tile {
+  display: grid;
+  gap: 2px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-top-width: 2px;
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+
+.tile-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.tile strong {
+  font-family: var(--mono);
+  font-size: 30px;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+
+.tile small {
+  color: var(--grey);
+  font-size: 11px;
+}
+
+.tile-live {
+  border-top-color: var(--accent);
+}
+.tile-job {
+  border-top-color: var(--text-2);
+}
+.tile-claim {
+  border-top-color: var(--blue);
+}
+.tile-result {
+  border-top-color: var(--accent);
+}
+.tile-attest {
+  border-top-color: var(--green);
+}
+.tile-quiet {
+  border-top-color: var(--grey);
+}
+
+/* ---------- Stage ---------- */
+
+.stage {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+
+.stage-head,
+.history-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 16px;
+}
+
+.history-head {
+  border-top: 1px solid var(--border);
+}
+
+.stage-title h2,
+.history-head h3 {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.history-head h3 {
+  font-size: 12px;
+  color: var(--text-2);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+#stageTopic {
+  max-width: 80ch;
+  overflow: hidden;
+  color: var(--grey);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stage-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.status-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--grey);
+}
+
+.status-dot[data-state="ok"] {
+  background: var(--green);
+}
+.status-dot[data-state="warn"] {
+  background: var(--accent);
+}
+.status-dot[data-state="error"] {
+  background: var(--error);
+}
+
+.ghost-button {
+  min-height: 32px;
+  padding: 5px 12px;
+  border: 1px solid var(--accent);
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.is-hidden {
+  display: none;
+}
+
+.canvas-scroll {
+  overflow-x: auto;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+}
+
+#fieldCanvas {
+  aspect-ratio: 1440 / 640;
+  background: var(--base);
+}
+
+#chartCanvas {
+  aspect-ratio: 1440 / 150;
+  background: var(--base);
+}
+
+/* ---------- Controls ---------- */
+
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.control-group {
+  display: flex;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 108px;
+  text-transform: uppercase;
+}
+
+.button.is-small {
+  min-width: 52px;
+}
+
+.glyph {
+  font-size: 11px;
+}
+
+.scrubber {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1 1 260px;
+  min-width: 220px;
+}
+
+.scrubber strong {
+  min-width: 92px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  font-family: var(--mono);
+  font-size: 13px;
+  text-align: center;
+}
+
+input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+/* ---------- Lower panels ---------- */
+
+.lower {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.panel {
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+
+.panel-head {
+  margin-bottom: 10px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.room-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.room-card {
+  display: grid;
+  gap: 3px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--base);
+  text-align: left;
+  transition: border-color 120ms ease;
+}
+
+.room-card:hover {
+  border-color: var(--grey);
+  border-left-color: var(--accent-hover);
+}
+
+.room-card.is-active {
+  border-color: var(--border);
+  border-left-color: var(--accent);
+}
+
+.room-card b {
+  overflow: hidden;
+  color: var(--ice);
+  font-family: var(--mono);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.room-card span {
+  overflow: hidden;
+  color: var(--grey);
+  font-family: var(--mono);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.room-card em {
+  overflow: hidden;
+  color: var(--text-2);
+  font-size: 11px;
+  font-style: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.disclaimer,
+.colophon p {
+  max-width: 100ch;
+  margin-top: 10px;
+  color: var(--grey);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.tape {
+  display: grid;
+  gap: 4px;
+  max-height: 208px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tape li {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  gap: 8px;
+  align-items: baseline;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.tape time {
+  color: var(--grey);
+}
+
+.tape .tape-verb {
+  font-weight: 700;
+}
+
+.tape .tape-text {
+  overflow: hidden;
+  color: var(--text-2);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v-job {
+  color: var(--text-2);
+}
+.v-claim {
+  color: var(--accent-hover);
+}
+.v-result {
+  color: var(--accent);
+}
+.v-attest {
+  color: var(--green);
+}
+.v-reject {
+  color: var(--error);
+}
+.v-talk {
+  color: var(--grey);
+}
+
+.colophon {
+  display: grid;
+  gap: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+
+.colophon b {
+  color: var(--text-2);
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 1180px) {
+  .tiles {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .explainer-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lower {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .shell {
+    width: min(100% - 20px, 1520px);
+  }
+
+  .masthead,
+  .masthead-controls,
+  .controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  /* Flex children default to min-content width, which lets the long title and
+     the monospace tape push the page wider than the viewport. */
+  .identity,
+  .identity-text,
+  .masthead-controls,
+  .field-select,
+  .panel,
+  .stage {
+    min-width: 0;
+  }
+
+  .identity {
+    align-items: flex-start;
+    gap: 14px;
+  }
+
+  .chip-plate {
+    width: 52px;
+    height: 52px;
+    padding: 8px;
+  }
+
+  .field-select select {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .tiles,
+  .room-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .explainer-steps {
+    grid-template-columns: 1fr;
+  }
+
+  .control-group {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  /* Four speed buttons, so they get four columns rather than wrapping 3 + 1. */
+  .control-group:last-of-type {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .button {
+    min-width: 0;
+  }
+
+  /* In a column the scrubber must not claim the leftover height as a gap. */
+  .scrubber {
+    flex: 0 0 auto;
+  }
+
+  /* The field is drawn on a 1440-wide grid; letting it shrink to phone width
+     makes every agent a smudge, so it scrolls sideways at a legible size. */
+  .canvas-scroll canvas {
+    min-width: 720px;
+  }
+
+  .stage-head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+}
+
+/* Visible to screen readers only: the colour key is painted on the canvas. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

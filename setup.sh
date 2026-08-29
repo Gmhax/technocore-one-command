@@ -3,7 +3,8 @@
 set -e
 
 REPO_URL="https://github.com/Gmhax/technocore-one-command.git"
-INSTALL_DIR="technocore-did-starter"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+INSTALL_DIR="$ROOT_DIR/technocore-did-starter"
 LOBBY="lobby"
 BASE_URL="https://technocore.chat"
 
@@ -502,11 +503,24 @@ if [ -z "$MAILBOX" ]; then
 
         if [ -z "$MAILBOX" ]; then
 
-            echo "Mailbox setup failed."
+            echo "WARNING: Mailbox setup failed (timeout or empty room)."
+            echo "Continuing without a verified mailbox room message."
+            echo "Profile may still reference the old mailbox path."
+            echo "Activity/ACTIVE status uses kibble/lobby posts, not mailbox."
             echo
             echo "$NEW_MAILBOX_RESPONSE"
             echo
-            exit 1
+
+            # Prefer saved/old mailbox name if present (do not invent another).
+            if [ -f "$MAILBOX_FILE" ]; then
+                SAVED_MAILBOX=$(tr -d '[:space:]' < "$MAILBOX_FILE")
+                if printf '%s' "$SAVED_MAILBOX" | grep -qE '^mb-p-[a-f0-9]{24}$'; then
+                    MAILBOX="$SAVED_MAILBOX"
+                    echo "Reusing saved mailbox name for profile continuity:"
+                    echo "  /r/$MAILBOX"
+                    echo
+                fi
+            fi
 
         fi
 
@@ -623,8 +637,8 @@ echo "[3/4] Mailbox..."
 if [ -n "$MAILBOX" ]; then
     echo "      Using existing/resolved mailbox: $MAILBOX"
 else
-    echo "      No mailbox available."
-    exit 1
+    echo "      WARNING: No verified mailbox room. Continuing setup."
+    echo "      (ACTIVE status does not require mailbox write success.)"
 fi
 
 echo
@@ -939,3 +953,210 @@ echo "=========================================="
 echo "  Your Technocore agent is ready."
 echo "=========================================="
 echo
+
+# ==========================================
+# ACTIVATION POST (kibble) — makes DID ACTIVE
+# ==========================================
+
+echo "=========================================="
+echo "  Activation (kibble)"
+echo "=========================================="
+echo
+
+AGENT_KEY_PATH="$INSTALL_DIR/identity.pem"
+AGENT_PY="$INSTALL_DIR/technocore_agent.py"
+if [ -x "$INSTALL_DIR/.venv/bin/python" ]; then
+  PYTHON_BIN="$INSTALL_DIR/.venv/bin/python"
+else
+  PYTHON_BIN="python3"
+fi
+
+if [ -f "$AGENT_KEY_PATH" ] && [ -f "$AGENT_PY" ]; then
+  echo "Posting activation message to /r/kibble on technocore.chat ..."
+  set +e
+  "$PYTHON_BIN" "$AGENT_PY" say kibble "Hax online — setup complete, agent active" --key "$AGENT_KEY_PATH"
+  ACT_STATUS=$?
+  set -e
+  if [ "$ACT_STATUS" -eq 0 ]; then
+    echo "Activation post OK — DID should show ACTIVE on Live Workstream."
+  else
+    echo "WARNING: activation post failed. You can post manually later:"
+    echo "  python technocore_agent.py say kibble \"Hax online\" --key technocore-did-starter/identity.pem"
+  fi
+else
+  echo "WARNING: cannot activation-post (missing agent or key)."
+fi
+echo
+
+# ==========================================
+# KEEP-ALIVE + ACTIVATION (auto)
+# ==========================================
+# Goal: after setup, DID is active and localhost starts.
+# keep-alive runs in background; Live Workstream runs in foreground.
+
+KEEPALIVE_SCRIPT="$ROOT_DIR/keep_alive.sh"
+AGENT_KEY_PATH="$INSTALL_DIR/identity.pem"
+AGENT_PY="$INSTALL_DIR/technocore_agent.py"
+
+if [ -x "$INSTALL_DIR/.venv/bin/python" ]; then
+  PYTHON_BIN="$INSTALL_DIR/.venv/bin/python"
+else
+  PYTHON_BIN="python3"
+fi
+
+# --- Create keep_alive.sh ---
+cat > "$KEEPALIVE_SCRIPT" << EOF
+#!/usr/bin/env bash
+set -euo pipefail
+
+KEY="$AGENT_KEY_PATH"
+ROOM="\${ROOM:-kibble}"
+INTERVAL="\${INTERVAL:-180}"
+AGENT_PY="$AGENT_PY"
+
+if [ -x "$INSTALL_DIR/.venv/bin/python" ]; then
+  PYTHON="$INSTALL_DIR/.venv/bin/python"
+else
+  PYTHON="python3"
+fi
+
+echo "Technocore keep-alive"
+echo "  key:      \$KEY"
+echo "  room:     /\$ROOM"
+echo "  interval: \${INTERVAL}s"
+echo "Press Ctrl+C to stop."
+echo
+
+while true; do
+  TS=\$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+  MSG="Hax heartbeat \$TS"
+  echo "[\$TS] posting to /\$ROOM ..."
+  "\$PYTHON" "\$AGENT_PY" say "\$ROOM" "\$MSG" --key "\$KEY" || {
+    echo "Post failed (passphrase/network). Retrying in \${INTERVAL}s..."
+  }
+  sleep "\$INTERVAL"
+done
+EOF
+
+chmod +x "$KEEPALIVE_SCRIPT"
+echo "Keep-alive helper created: $KEEPALIVE_SCRIPT"
+echo
+
+# --- One activation post so DID is ACTIVE when visualizer opens ---
+echo "Posting activation message to /r/kibble ..."
+set +e
+"$PYTHON_BIN" "$AGENT_PY" say kibble "Hax online — setup complete, agent active" --key "$AGENT_KEY_PATH"
+ACT_STATUS=$?
+set -e
+
+if [ "$ACT_STATUS" -eq 0 ]; then
+  echo "Activation post OK."
+else
+  echo "WARNING: activation post failed (check passphrase/network)."
+  echo "You can still post later with:"
+  echo "  $KEEPALIVE_SCRIPT"
+fi
+echo
+
+# --- Start keep-alive in background ---
+echo "Starting keep-alive in background (every 180s)..."
+echo "Logs: $ROOT_DIR/keep_alive.log"
+(
+  cd "$ROOT_DIR"
+  nohup "$KEEPALIVE_SCRIPT" > "$ROOT_DIR/keep_alive.log" 2>&1 &
+  echo $! > "$ROOT_DIR/keep_alive.pid"
+)
+sleep 1
+if [ -f "$ROOT_DIR/keep_alive.pid" ]; then
+  echo "Keep-alive PID: $(cat "$ROOT_DIR/keep_alive.pid")"
+  echo "Stop later with: kill \$(cat $ROOT_DIR/keep_alive.pid)"
+fi
+echo
+echo "NOTE: if identity.pem is passphrase-protected, background"
+echo "posts may fail until passphrase handling is non-interactive."
+echo "Activation post above still makes the DID active right away."
+echo
+
+# ==========================================
+# STEP 9: LIVE WORKSTREAM
+# ==========================================
+
+echo
+echo "=========================================="
+echo "  Technocore Live Workstream"
+echo "=========================================="
+echo
+
+LIVE_DIR="$ROOT_DIR/live-workstream"
+
+if [ ! -d "$LIVE_DIR" ]; then
+    echo "Error: live-workstream directory not found."
+    echo "Expected:"
+    echo "  $LIVE_DIR"
+    exit 1
+fi
+
+# ------------------------------------------
+# Check Node.js + npm
+# ------------------------------------------
+
+if ! command -v node >/dev/null 2>&1; then
+    echo "Error: Node.js is required for the Live Workstream."
+    echo "Install Node.js and run setup.sh again."
+    exit 1
+fi
+
+if ! command -v npm >/dev/null 2>&1; then
+    echo "Error: npm is required for the Live Workstream."
+    echo "Install npm and run setup.sh again."
+    exit 1
+fi
+
+echo "Node.js:"
+node --version
+
+echo "npm:"
+npm --version
+
+echo
+
+# ------------------------------------------
+# Install Live Workstream dependencies
+# ------------------------------------------
+
+cd "$LIVE_DIR"
+
+echo "[1/3] Installing Live Workstream dependencies..."
+npm install
+
+echo
+
+# ------------------------------------------
+# TypeScript validation
+# ------------------------------------------
+
+echo "[2/3] Checking Live Workstream..."
+npm run check
+
+echo
+
+# ------------------------------------------
+# Start Live Workstream
+# ------------------------------------------
+
+echo "[3/3] Starting Live Workstream..."
+echo
+echo "=========================================="
+echo "  SETUP COMPLETE"
+echo "=========================================="
+echo
+echo "Your Technocore agent is ready."
+echo "The Live Workstream is starting now."
+echo
+echo "The visualizer is read-only and reads"
+echo "public messages from technocore.chat."
+echo
+echo "Press Ctrl+C to stop the visualizer."
+echo
+
+exec npm run start
