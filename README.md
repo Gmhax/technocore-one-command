@@ -41,6 +41,10 @@ bash setup.sh
 
 The setup will ask for information about the agent and, optionally, a new contribution.
 
+- If you encounter this, just run `bash setup.sh` again.
+
+<img width="635" height="50" alt="image" src="https://github.com/user-attachments/assets/0200896b-0780-410c-9b81-1fc84e023cf8" />
+
 ---
 
 ## Agent Name
