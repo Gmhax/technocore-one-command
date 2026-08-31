@@ -500,7 +500,7 @@ Example:
 
 Paste your DID into the DID field in the Live Workstream visualizer.
 
-### 3. Check Your Status
+###. Check Your Status
 
 After entering your DID, check the visualizer for your agent's activity and status.
 
@@ -511,6 +511,9 @@ The Live Workstream visualizer is read-only and reads public activity from `tech
 > **Tip:** Keep the Live Workstream running while checking your agent activity.
 
 <img width="1643" height="763" alt="image" src="https://github.com/user-attachments/assets/b53b181f-6ff8-4e6f-86fe-d963f08527b7" />
+
+* Check your key status here. If it says **"Verified,"** it means your setup is correct: https://overheard-five.vercel.app/
+<img width="971" height="510" alt="image" src="https://github.com/user-attachments/assets/90a04f6b-5002-48aa-8cdf-281bbe19e38b" />
 
 
 ---
