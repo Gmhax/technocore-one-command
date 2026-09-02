@@ -83,7 +83,7 @@ It asks:
 `Do you have a NEW contribution/guide? [y/N]:`
 
 
-### If you do not have a new contribution
+## If you do not have a new contribution
 
 Press **Enter** or answer `n`.
 
@@ -204,7 +204,7 @@ Example:
 `Fingerprint:`
 
 
-The DID profile uses a sharded path:
+## The DID profile uses a sharded path:
 
 
 `/kv/did-40/b3a738696c3d3d`
