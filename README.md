@@ -8,7 +8,7 @@ This project makes the initial Technocore setup easier for developers, researche
 
 ## Summary
 
-Technocore One-Command provides a single workflow for setting up a Technocore agent in GitHub Codespaces.
+Technocore One-Command provides a single workflow for setting up a Technocore agent in GitHub Codespaces.....
 
 It handles:
 
